@@ -50,13 +50,17 @@ Scheduler::~Scheduler()
 //	"thread" is the thread to be put on the ready list.
 //----------------------------------------------------------------------
 
-void
+int
 Scheduler::ReadyToRun (Thread *thread)
 {
     DEBUG('t', "Putting thread %s on ready list.\n", thread->getName());
-
+    if (readyList->size() >= 128){
+        DEBUG('t', "Putting thread %s on ready list fail.\n", thread->getName());
+        return -1;
+    }
     thread->setStatus(READY);
     readyList->Append((void *)thread);
+    return 0;
 }
 
 //----------------------------------------------------------------------
@@ -142,6 +146,8 @@ Scheduler::Run (Thread *nextThread)
 void
 Scheduler::Print()
 {
-    printf("Ready list contents:\n");
+    printf("all thread contents:\n");
+    ThreadPrint((int)currentThread);
     readyList->Mapcar((VoidFunctionPtr) ThreadPrint);
+
 }

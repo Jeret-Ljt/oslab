@@ -29,7 +29,7 @@ SimpleThread(int which)
 {
     int num;
     
-    for (num = 0; num < 5; num++) {
+    for (num = 0; num < 2; num++) {
 	printf("*** thread %d looped %d times\n", currentThread->get_thread_id(), num);
         currentThread->Yield();
     }
@@ -53,6 +53,30 @@ ThreadTest1()
 }
 
 //----------------------------------------------------------------------
+// ThreadTest2
+//  Set up serveral threads, by forking 
+//  to call SimpleThread, and then calling SimpleThread ourselves.
+//  to test the threads number limitation.
+//----------------------------------------------------------------------
+
+void
+ThreadTest2()
+{
+    DEBUG('t', "Entering ThreadTest1");
+
+
+    for (int i = 0; i < 130; i++){
+
+        Thread *t = new Thread("forked thread");
+        int ret = t->Fork(SimpleThread, 1);
+        if (ret == -1){https://pic4.zhimg.com/80/v2-3a8eb8165b546c150d6098ad05ae7d35_1440w.jpg?source=1940ef5c
+            printf("thread id %d fork fail：threads number is up to limitation (128)\n", t->get_thread_id());
+        }
+    }
+    scheduler->Print();
+    SimpleThread(0);
+} 
+//----------------------------------------------------------------------
 // ThreadTest
 // 	Invoke a test routine.
 //----------------------------------------------------------------------
@@ -64,6 +88,8 @@ ThreadTest()
     case 1:
 	ThreadTest1();
 	break;
+    case 2:
+    ThreadTest2();
     default:
 	printf("No test specified.\n");
 	break;

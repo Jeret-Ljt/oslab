@@ -43,6 +43,7 @@ ListElement::ListElement(void *itemPtr, int sortKey)
 List::List()
 { 
     first = last = NULL; 
+    len = 0;
 }
 
 //----------------------------------------------------------------------
@@ -85,6 +86,7 @@ List::Append(void *item)
 	last->next = element;
 	last = element;
     }
+    len++;
 }
 
 //----------------------------------------------------------------------
@@ -111,6 +113,7 @@ List::Prepend(void *item)
 	element->next = first;
 	first = element;
     }
+    len++;
 }
 
 //----------------------------------------------------------------------
@@ -174,6 +177,10 @@ List::IsEmpty()
 //		anything.
 //	"sortKey" is the priority of the item.
 //----------------------------------------------------------------------
+int
+List::size(){
+    return len;
+}
 
 void
 List::SortedInsert(void *item, int sortKey)
@@ -199,6 +206,8 @@ List::SortedInsert(void *item, int sortKey)
 	last->next = element;		// item goes at end of list
 	last = element;
     }
+
+    len++;
 }
 
 //----------------------------------------------------------------------
@@ -233,6 +242,7 @@ List::SortedRemove(int *keyPtr)
     if (keyPtr != NULL)
         *keyPtr = element->key;
     delete element;
+    len--;
     return thing;
 }
 
