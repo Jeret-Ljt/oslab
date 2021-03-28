@@ -38,8 +38,10 @@ Thread::Thread(char* threadName)
     stackTop = NULL;
     stack = NULL;
     status = JUST_CREATED;
+    thread_id = thread_num++;
 #ifdef USER_PROGRAM
     space = NULL;
+    user_id = user_num++;
 #endif
 }
 

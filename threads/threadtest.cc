@@ -30,7 +30,7 @@ SimpleThread(int which)
     int num;
     
     for (num = 0; num < 5; num++) {
-	printf("*** thread %d looped %d times\n", which, num);
+	printf("*** thread %d looped %d times\n", currentThread->get_thread_id(), num);
         currentThread->Yield();
     }
 }
