@@ -27,9 +27,10 @@
 // 	Initialize the list of ready but not running threads to empty.
 //----------------------------------------------------------------------
 
-Scheduler::Scheduler()
+Scheduler::Scheduler(bool preemptive)
 { 
     readyList = new List; 
+    enable_preemptation = preemptive;
 } 
 
 //----------------------------------------------------------------------
@@ -41,7 +42,9 @@ Scheduler::~Scheduler()
 { 
     delete readyList; 
 } 
-
+bool Scheduler::get_preemptive(){
+      return enable_preemptation;
+}
 //----------------------------------------------------------------------
 // Scheduler::ReadyToRun
 // 	Mark a thread as ready, but not running.
@@ -59,7 +62,7 @@ Scheduler::ReadyToRun (Thread *thread)
         return -1;
     }
     thread->setStatus(READY);
-    readyList->Append((void *)thread);
+    readyList->SortedInsert((void *)thread, thread->get_priority());
     return 0;
 }
 

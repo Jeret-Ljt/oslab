@@ -62,20 +62,37 @@ ThreadTest1()
 void
 ThreadTest2()
 {
-    DEBUG('t', "Entering ThreadTest1");
-
-
+    DEBUG('t', "Entering ThreadTest2");
     for (int i = 0; i < 130; i++){
-
         Thread *t = new Thread("forked thread");
         int ret = t->Fork(SimpleThread, 1);
-        if (ret == -1){https://pic4.zhimg.com/80/v2-3a8eb8165b546c150d6098ad05ae7d35_1440w.jpg?source=1940ef5c
+        if (ret == -1){
             printf("thread id %d fork fail：threads number is up to limitation (128)\n", t->get_thread_id());
         }
     }
     scheduler->Print();
     SimpleThread(0);
 } 
+
+
+void Simple(int arg){
+    printf("tid: %d, prioiry: %d is running\n", currentThread->get_thread_id(), currentThread->get_priority());
+    interrupt->OneTick();
+    printf("tid: %d, prioiry: %d finished\n", currentThread->get_thread_id(), currentThread->get_priority());
+}
+void Preemptive_test(){
+    DEBUG('t', "Entering Preemptive_test");
+    for (int i = 0; i < 3; i++){
+        
+        int p = Random() % 3;
+        printf("tid: %d, prioiry: %d is creating a thread with priority %d \n", currentThread->get_thread_id(), currentThread->get_priority(), p);
+        
+        Thread *t = new Thread("forked thread", p);
+        t->Fork(Simple, i);
+    }
+    printf("tid: %d, prioiry: %d finished\n", currentThread->get_thread_id(), currentThread->get_priority());
+        
+}
 //----------------------------------------------------------------------
 // ThreadTest
 // 	Invoke a test routine.
@@ -90,6 +107,10 @@ ThreadTest()
 	break;
     case 2:
     ThreadTest2();
+    break;
+    case 3:
+    Preemptive_test();
+    break;
     default:
 	printf("No test specified.\n");
 	break;

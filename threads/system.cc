@@ -65,6 +65,8 @@ TimerInterruptHandler(int dummy)
 {
     if (interrupt->getStatus() != IdleMode)
 	interrupt->YieldOnReturn();
+
+    printf("time interrupt! interrrupt current threadid: %d\n", currentThread->get_thread_id());
 }
 
 //----------------------------------------------------------------------
@@ -83,7 +85,7 @@ Initialize(int argc, char **argv)
     int argCount;
     char* debugArgs = "";
     bool randomYield = FALSE;
-
+    bool preemptive = FALSE;
 #ifdef USER_PROGRAM
     bool debugUserProg = FALSE;	// single step user program
 #endif
@@ -110,7 +112,9 @@ Initialize(int argc, char **argv)
 						// number generator
 	    randomYield = TRUE;
 	    argCount = 2;
-	}
+	} else if (!strcmp(*argv, "-preemptive")){
+        preemptive = TRUE;
+    }
 #ifdef USER_PROGRAM
 	if (!strcmp(*argv, "-s"))
 	    debugUserProg = TRUE;
@@ -135,16 +139,15 @@ Initialize(int argc, char **argv)
     DebugInit(debugArgs);			// initialize DEBUG messages
     stats = new Statistics();			// collect statistics
     interrupt = new Interrupt;			// start up interrupt handling
-    scheduler = new Scheduler();		// initialize the ready queue
-    if (randomYield)				// start the timer (if needed)
-	timer = new Timer(TimerInterruptHandler, 0, randomYield);
+    scheduler = new Scheduler(preemptive);		// initialize the ready queue
+	timer = new Timer(TimerInterruptHandler, 0, randomYield); 	// start the timer (if needed)
 
     threadToBeDestroyed = NULL;
 
     // We didn't explicitly allocate the current thread we are running in.
     // But if it ever tries to give up the CPU, we better have a Thread
     // object to save its state. 
-    currentThread = new Thread("main");		
+    currentThread = new Thread("main", 1);		
     currentThread->setStatus(RUNNING);
 
     interrupt->Enable();

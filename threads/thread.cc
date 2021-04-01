@@ -32,8 +32,9 @@
 //	"threadName" is an arbitrary string, useful for debugging.
 //----------------------------------------------------------------------
 
-Thread::Thread(char* threadName)
+Thread::Thread(char* threadName, int threadPriority)
 {
+    priority = threadPriority;
     name = threadName;
     stackTop = NULL;
     stack = NULL;
@@ -92,15 +93,18 @@ Thread::Fork(VoidFunctionPtr func, int arg)
     DEBUG('t', "Forking thread \"%s\" with func = 0x%x, arg = %d\n",
 	  name, (int) func, arg);
     
-
     StackAllocate(func, arg);
 
     IntStatus oldLevel = interrupt->SetLevel(IntOff);
     int ret = scheduler->ReadyToRun(this);	// ReadyToRun assumes that interrupts 
 					// are disabled!
+    
+    if (scheduler->get_preemptive() && priority < currentThread->get_priority()){
+        currentThread->Yield();
+    }
     (void) interrupt->SetLevel(oldLevel);
-    return ret;
 
+    return ret;
 }    
 
 //----------------------------------------------------------------------
