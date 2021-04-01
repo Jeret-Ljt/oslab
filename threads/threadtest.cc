@@ -28,10 +28,9 @@ void
 SimpleThread(int which)
 {
     int num;
-    
-    for (num = 0; num < 2; num++) {
-	printf("*** thread %d looped %d times\n", currentThread->get_thread_id(), num);
-        currentThread->Yield();
+    for (num = 0; num < 16; num++) {
+	    printf("*** thread %d looped %d times\n", currentThread->get_thread_id(), num);
+        interrupt->OneTick();
     }
 }
 
@@ -77,9 +76,11 @@ ThreadTest2()
 
 void Simple(int arg){
     printf("tid: %d, prioiry: %d is running\n", currentThread->get_thread_id(), currentThread->get_priority());
-    interrupt->OneTick();
+    //interrupt->OneTick();
     printf("tid: %d, prioiry: %d finished\n", currentThread->get_thread_id(), currentThread->get_priority());
 }
+
+
 void Preemptive_test(){
     DEBUG('t', "Entering Preemptive_test");
     for (int i = 0; i < 3; i++){
@@ -92,6 +93,15 @@ void Preemptive_test(){
     }
     printf("tid: %d, prioiry: %d finished\n", currentThread->get_thread_id(), currentThread->get_priority());
         
+}
+
+void time_slice_test(){
+    DEBUG('t', "Entering time_slice_test");
+    for (int i = 0; i < 2; i++){
+        Thread *t = new Thread("forked thread", 1);
+        t->Fork(SimpleThread, i);
+    }
+    SimpleThread(0);
 }
 //----------------------------------------------------------------------
 // ThreadTest
@@ -110,6 +120,9 @@ ThreadTest()
     break;
     case 3:
     Preemptive_test();
+    break;
+    case 4:
+    time_slice_test();
     break;
     default:
 	printf("No test specified.\n");
