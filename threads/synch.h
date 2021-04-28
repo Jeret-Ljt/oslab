@@ -76,9 +76,10 @@ class Lock {
 					// holds this lock.  Useful for
 					// checking in Release, and in
 					// Condition variable ops below.
-
   private:
     char* name;				// for debugging
+    Thread* held_thread;
+    List *queue;       // threads waiting in Acquire() for the lock to be release()
     // plus some other stuff you'll need to define
 };
 
@@ -131,6 +132,24 @@ class Condition {
 
   private:
     char* name;
+    List* queue;
     // plus some other stuff you'll need to define
+};
+
+// The following class defines a "Barrier".
+class Barrier{
+  public:
+    Barrier(char* debugName, VoidFunctionPtr func, int arg_num);
+    ~Barrier();			// deallocate the Barrier
+
+    void SignalAndWait();
+  
+  private:
+    char* name;
+    int max_num, num;
+
+    Condition* cond;
+    Lock* lock;
+    VoidFunctionPtr action;
 };
 #endif // SYNCH_H

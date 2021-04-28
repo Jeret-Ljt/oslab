@@ -86,6 +86,7 @@ Initialize(int argc, char **argv)
     char* debugArgs = "";
     bool randomYield = FALSE;
     bool preemptive = FALSE;
+    bool enable_timer = FALSE;
 #ifdef USER_PROGRAM
     bool debugUserProg = FALSE;	// single step user program
 #endif
@@ -114,6 +115,10 @@ Initialize(int argc, char **argv)
 	    argCount = 2;
 	} else if (!strcmp(*argv, "-preemptive")){
         preemptive = TRUE;
+        argCount = 1;
+    } else if (!strcmp(*argv, "-enable_timer")){
+        enable_timer = TRUE;
+        argCount = 1;
     }
 #ifdef USER_PROGRAM
 	if (!strcmp(*argv, "-s"))
@@ -140,7 +145,8 @@ Initialize(int argc, char **argv)
     stats = new Statistics();			// collect statistics
     interrupt = new Interrupt;			// start up interrupt handling
     scheduler = new Scheduler(preemptive);		// initialize the ready queue
-	timer = new Timer(TimerInterruptHandler, 0, randomYield); 	// start the timer (if needed)
+	if (enable_timer)
+        timer = new Timer(TimerInterruptHandler, 0, randomYield); 	// start the timer (if needed)
 
     threadToBeDestroyed = NULL;
 

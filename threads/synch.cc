@@ -100,13 +100,95 @@ Semaphore::V()
 // Dummy functions -- so we can compile our later assignments 
 // Note -- without a correct implementation of Condition::Wait(), 
 // the test case in the network assignment won't work!
-Lock::Lock(char* debugName) {}
-Lock::~Lock() {}
-void Lock::Acquire() {}
-void Lock::Release() {}
+Lock::Lock(char* debugName) {
+    name = debugName;
+    held_thread = NULL;
+    queue = new List;
+}
+Lock::~Lock() {
+    delete queue;
+}
+void Lock::Acquire() {
+    IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
+    while (held_thread != NULL){  
+	    queue->Append((void *)currentThread);	// so go to sleep
+        currentThread->Sleep();
+    }
+    held_thread = currentThread;
+    (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+}
+void Lock::Release() {
+    ASSERT(isHeldByCurrentThread());
+    Thread *thread;
+    IntStatus oldLevel = interrupt->SetLevel(IntOff);
+    thread = (Thread *)queue->Remove();
+    if (thread != NULL)	   // make thread ready, acquire the lock immediately
+	    scheduler->ReadyToRun(thread);
+    held_thread = NULL;
+    (void) interrupt->SetLevel(oldLevel);
+}
 
-Condition::Condition(char* debugName) { }
-Condition::~Condition() { }
-void Condition::Wait(Lock* conditionLock) { ASSERT(FALSE); }
-void Condition::Signal(Lock* conditionLock) { }
-void Condition::Broadcast(Lock* conditionLock) { }
+bool Lock::isHeldByCurrentThread(){
+    return held_thread == currentThread;
+}
+
+Condition::Condition(char* debugName) { 
+    name = debugName;
+    queue = new List;
+}
+Condition::~Condition() { 
+    delete queue;
+}
+void Condition::Wait(Lock* conditionLock) {
+    IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
+    conditionLock->Release();
+    queue->Append((void*) currentThread);
+    currentThread->Sleep();
+    conditionLock->Acquire();
+    (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+}
+void Condition::Signal(Lock* conditionLock) { 
+    Thread* thread;
+    IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
+    thread = (Thread *)queue->Remove();
+    if (thread != NULL)	   // make thread ready, acquire the lock immediately
+	    scheduler->ReadyToRun(thread);
+    (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+}
+void Condition::Broadcast(Lock* conditionLock) {
+    Thread* thread;
+    IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
+    do{
+        thread = (Thread *)queue->Remove();
+        if (thread != NULL)	   // make thread ready, acquire the lock immediately
+            scheduler->ReadyToRun(thread);
+    }   while (thread != NULL);
+    (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
+}
+
+
+Barrier:: Barrier(char* debugName, VoidFunctionPtr func, int arg_num){
+    name = debugName;
+    action = func;
+    max_num = arg_num;
+    num = 0;
+    lock = new Lock("new lock");
+    cond = new Condition("new condition");
+}
+Barrier:: ~Barrier(){
+    delete lock;
+    delete cond;
+}
+void Barrier::SignalAndWait(){
+    lock -> Acquire();
+    num++;
+    if (num < max_num){
+        cond->Wait(lock);
+    }   else
+    if (num == max_num){
+        action((int)("enough thread in the barrier, the barrier triger the action!\n"));
+        num = 0;
+        cond->Broadcast(lock);
+    }
+    lock -> Release();
+}

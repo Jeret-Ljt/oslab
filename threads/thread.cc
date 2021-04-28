@@ -87,6 +87,7 @@ Thread::~Thread()
 //	"arg" is a single argument to be passed to the procedure.
 //----------------------------------------------------------------------
 
+
 int 
 Thread::Fork(VoidFunctionPtr func, int arg)
 {
@@ -101,7 +102,7 @@ Thread::Fork(VoidFunctionPtr func, int arg)
     
     if (scheduler->get_preemptive() && priority < currentThread->get_priority()){
         currentThread->Yield();
-    }
+    } //preemptive rule
     (void) interrupt->SetLevel(oldLevel);
 
     return ret;
