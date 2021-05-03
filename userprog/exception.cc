@@ -21,6 +21,7 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#define USER_PROGRAM
 #include "copyright.h"
 #include "system.h"
 #include "syscall.h"
@@ -53,11 +54,62 @@ ExceptionHandler(ExceptionType which)
 {
     int type = machine->ReadRegister(2);
 
-    if ((which == SyscallException) && (type == SC_Halt)) {
-	DEBUG('a', "Shutdown, initiated by user program.\n");
-   	interrupt->Halt();
-    } else {
-	printf("Unexpected user mode exception %d %d\n", which, type);
-	ASSERT(FALSE);
+    switch (which){
+        case SyscallException:
+            if (type == SC_Halt){
+	            DEBUG('a', "Shutdown, initiated by user program.\n");
+   	            interrupt->Halt();
+            }   else
+            if (type == SC_Exit){
+
+                printf("%d\n", machine->ReadRegister(4));
+                ASSERT(machine->ReadRegister(4) == 0);
+                currentThread->Finish();
+            }
+        break;
+        case TLBMissException:
+
+           // printf("TLBMISS! vpage = %d\n", machine->registers[BadVAddrReg] / PageSize);
+            stats->numTLBMiss++;
+            for (int i = 0; i < machine->pageTableSize; i++){
+                if (machine->registers[BadVAddrReg] / PageSize == machine->pageTable[i].virtualPage){
+                    if (machine->pageTable[i].valid == false){
+                        machine->RaiseException(PageFaultException, machine->registers[BadVAddrReg]);
+                        return;
+                    }
+
+                    bool full = true;
+                    for (int j = 0; j < TLBSize; j++)
+                        if (machine->tlb[j].valid == false){
+                            machine->tlb[j] = machine->pageTable[i];
+                            full = false;
+                            break;
+                        }
+                    if (full){
+                        int min_time = 0x7fffffff, index = 0;
+                        for (int j = 0; j < TLBSize; j++)
+                            if (machine->tlb[j].last_use_time < min_time){
+                                min_time = machine->tlb[j].last_use_time;
+                                index = j;
+                            }
+
+               //         printf("TLB is full and replace the vpage %d\n", machine->tlb[index].virtualPage);
+                        machine->tlb[index] = machine->pageTable[i];
+                    }   else
+                        printf("TLB is not full!\n");
+
+                //    printf("TLB vp pp:\n");
+                //    for (int j = 0; j < TLBSize; j++)
+                //        printf("   %d   %d\n", machine->tlb[j].virtualPage, machine->tlb[j].physicalPage);
+                    
+                    return;
+                } 
+            }
+            machine->RaiseException(PageFaultException, machine->registers[BadVAddrReg]);
+            break;
+
+        default:
+            printf("Unexpected user mode exception %d %d\n", which, type);
+            ASSERT(FALSE);
     }
 }

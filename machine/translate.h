@@ -40,6 +40,8 @@ class TranslationEntry {
 			// page is referenced or modified.
     bool dirty;         // This bit is set by the hardware every time the
 			// page is modified.
+
+    int last_use_time; // record the time_stamp in which the entry was last used
 };
 
 #endif

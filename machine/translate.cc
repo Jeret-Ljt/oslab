@@ -200,7 +200,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     }
     
     // we must have either a TLB or a page table, but not both!
-    ASSERT(tlb == NULL || pageTable == NULL);	
+    //ASSERT(tlb == NULL || pageTable == NULL);	 now we have both tlb and pageTable
     ASSERT(tlb != NULL || pageTable != NULL);	
 
 // calculate the virtual page number, and offset within the page,
@@ -227,7 +227,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 	    }
 	if (entry == NULL) {				// not found
     	    DEBUG('a', "*** no valid TLB entry found for this virtual page!\n");
-    	    return PageFaultException;		// really, this is a TLB fault,
+    	    return TLBMissException;		// really, this is a TLB fault,
 						// the page may be in memory,
 						// but not in the TLB
 	}
@@ -246,10 +246,14 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 	return BusErrorException;
     }
     entry->use = TRUE;		// set the use, dirty bits
+	entry->last_use_time = stats->totalTicks;
+	if (tlb != NULL) stats->numTLBhit++;
     if (writing)
-	entry->dirty = TRUE;
+		entry->dirty = TRUE;
+
     *physAddr = pageFrame * PageSize + offset;
     ASSERT((*physAddr >= 0) && ((*physAddr + size) <= MemorySize));
     DEBUG('a', "phys addr = 0x%x\n", *physAddr);
+
     return NoException;
 }
