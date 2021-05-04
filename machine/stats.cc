@@ -46,6 +46,7 @@ Statistics::Print()
     printf("Network I/O: packets received %d, sent %d\n", numPacketsRecvd, 
 	numPacketsSent);
 #ifdef USE_TLB
-    printf("TLB hit rate: %.2lf\n", numTLBhit / (numTLBMiss + numTLBhit));
+    printf("TLB hit rate: %.2lf\n", double(numTLBhit) / (numTLBMiss + numTLBhit));
+    printf("numhit: %d nummiss: %d\n", numTLBhit, numTLBMiss);
 #endif
 }

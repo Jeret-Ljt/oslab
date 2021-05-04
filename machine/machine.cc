@@ -199,6 +199,12 @@ Machine::DumpState()
 //   	Fetch or write the contents of a user program register.
 //----------------------------------------------------------------------
 
+void Machine::PrintTlb(){
+    printf("TLB vp   pp  last-use:\n");                    
+    for (int j = 0; j < TLBSize; j++)
+    printf("    %d   %d   %d\n", tlb[j].virtualPage, tlb[j].physicalPage, tlb[j].last_use_time);
+                    
+}
 int Machine::ReadRegister(int num)
     {
 	ASSERT((num >= 0) && (num < NumTotalRegs));

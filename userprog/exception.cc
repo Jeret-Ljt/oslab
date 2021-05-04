@@ -69,7 +69,7 @@ ExceptionHandler(ExceptionType which)
         break;
         case TLBMissException:
 
-           // printf("TLBMISS! vpage = %d\n", machine->registers[BadVAddrReg] / PageSize);
+            printf("TLBMISS! vpage = %d\n", machine->registers[BadVAddrReg] / PageSize);
             stats->numTLBMiss++;
             for (int i = 0; i < machine->pageTableSize; i++){
                 if (machine->registers[BadVAddrReg] / PageSize == machine->pageTable[i].virtualPage){
@@ -93,14 +93,14 @@ ExceptionHandler(ExceptionType which)
                                 index = j;
                             }
 
-               //         printf("TLB is full and replace the vpage %d\n", machine->tlb[index].virtualPage);
+                         printf("TLB is full and replace the vpage %d\n", machine->tlb[index].virtualPage);
+                         printf("before: \n");
+                         machine->PrintTlb();
                         machine->tlb[index] = machine->pageTable[i];
-                    }   else
-                        printf("TLB is not full!\n");
-
-                //    printf("TLB vp pp:\n");
-                //    for (int j = 0; j < TLBSize; j++)
-                //        printf("   %d   %d\n", machine->tlb[j].virtualPage, machine->tlb[j].physicalPage);
+                        machine->tlb[index].last_use_time = stats->totalTicks;
+                        printf("after\n");
+                        machine->PrintTlb();
+                    }
                     
                     return;
                 } 

@@ -246,7 +246,11 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
 	return BusErrorException;
     }
     entry->use = TRUE;		// set the use, dirty bits
-	entry->last_use_time = stats->totalTicks;
+	
+	#ifdef USE_LRU
+		entry->last_use_time = stats->totalTicks;
+	#endif
+	
 	if (tlb != NULL) stats->numTLBhit++;
     if (writing)
 		entry->dirty = TRUE;
