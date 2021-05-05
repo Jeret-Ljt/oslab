@@ -53,13 +53,15 @@ void
 ExceptionHandler(ExceptionType which)
 {
     int type = machine->ReadRegister(2);
-
+    int p_page, v_page, d_page;
     switch (which){
         case PageFaultException:
-            int p_page = machine->MBitMap->Find();
-            int v_page = machine->registers[BadVAddrReg] / PageSize;
-            int d_page = machine->pageTable[v_page].tmp_disk_page;
+
+            p_page = machine->MBitMap->Find();
+            v_page = machine->registers[BadVAddrReg] / PageSize;
+            d_page = machine->pageTable[v_page].tmp_disk_page;
             if (p_page != -1 && currentThread->PhyPageNum < PagePerThread){
+                
                 machine->pageTable[v_page].physicalPage = p_page;
                 machine->pageTable[v_page].pid = currentThread->get_thread_id();
                 machine->pageTable[v_page].valid = true;
@@ -83,8 +85,14 @@ ExceptionHandler(ExceptionType which)
                         machine->tmp_disk[dirty_d_page * PageSize + i] = machine->mainMemory[p_page * PageSize + i]; //write back;
                     machine->pageTable[index].dirty = false;
                 }
+                machine->pageTable[index].valid = false;
                 for (int i = 0; i < PageSize; i++)
                     machine->mainMemory[p_page * PageSize + i] = machine->tmp_disk[d_page * PageSize + i];
+                
+                machine->pageTable[v_page].physicalPage = p_page;
+                machine->pageTable[v_page].pid = currentThread->get_thread_id();
+                machine->pageTable[v_page].valid = true;
+                machine->pageTable[v_page].dirty = false;
                 machine->pageTable[v_page].last_use_time = stats->totalTicks;
             }
         break;
@@ -95,7 +103,7 @@ ExceptionHandler(ExceptionType which)
             }   else
             if (type == SC_Exit){
 
-                printf("%d\n", machine->ReadRegister(4));
+                printf("exit code: %d\n", machine->ReadRegister(4));
                 ASSERT(machine->ReadRegister(4) == 0);
                 currentThread->Finish();
             }

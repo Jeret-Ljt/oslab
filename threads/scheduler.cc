@@ -56,9 +56,9 @@ bool Scheduler::get_preemptive(){
 int
 Scheduler::ReadyToRun (Thread *thread)
 {
-    DEBUG('t', "Putting thread %s on ready list.\n", thread->getName());
+    DEBUG('t', "Putting thread \"%s\" on ready list.\n", thread->getName());
     if (readyList->size() >= 128){
-        DEBUG('t', "Putting thread %s on ready list fail.\n", thread->getName());
+        DEBUG('t', "Putting thread \"%s\" on ready list fail.\n", thread->getName());
         return -1;
     }
     thread->setStatus(READY);

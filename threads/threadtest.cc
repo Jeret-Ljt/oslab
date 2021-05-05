@@ -122,11 +122,11 @@ void consumer(int arg){
     SYNC_CONSUMER_PRODUCER* ptr = (SYNC_CONSUMER_PRODUCER *)arg;
     ptr->lock->Acquire();
     while (ptr->queue->size() == 0){
-        printf("thread %s found queue is empty\n", currentThread->getName());
+        printf("thread \"%s\" found queue is empty\n", currentThread->getName());
         ptr->cond->Wait(ptr->lock);
     }
     int thing =(int) ptr->queue->Remove();
-    printf("thread %s is consuming product %d\n", currentThread->getName(), thing);
+    printf("thread \"%s\" is consuming product %d\n", currentThread->getName(), thing);
     printf("now we have %d product(s): ", ptr->queue->size());
     ptr->queue->Mapcar(print_it);
     printf("\n");
@@ -140,13 +140,13 @@ void producer(int arg){
 
     ptr->lock->Acquire();
     while (ptr->queue->size() == ptr->queue_max_size){
-        printf("thread %s found queue is full(max_size = %d)\n", currentThread->getName(), ptr->queue_max_size);
+        printf("thread \"%s\" found queue is full(max_size = %d)\n", currentThread->getName(), ptr->queue_max_size);
         ptr->cond->Wait(ptr->lock);
     }
 
     int thing = currentThread->get_thread_id() - 1;
     ptr->queue->Append((void*)thing);
-    printf("thread %s is proucing product %d\n", currentThread->getName(), thing);
+    printf("thread \"%s\" is proucing product %d\n", currentThread->getName(), thing);
     printf("now we have %d product(s): ", ptr->queue->size());
     ptr->queue->Mapcar(print_it);
     printf("\n");

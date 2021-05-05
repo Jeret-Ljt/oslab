@@ -89,7 +89,6 @@ Machine::Machine(bool debug)
 Machine::~Machine()
 {
     delete [] mainMemory;
-    delete [] InvertPageTable;
     delete [] tmp_disk;
     delete  MBitMap;
 

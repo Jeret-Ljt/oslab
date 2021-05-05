@@ -8,6 +8,7 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#define USER_PROGRAM
 #include "copyright.h"
 #include "system.h"
 #include "console.h"
@@ -20,26 +21,42 @@
 //	memory, and jump to it.
 //----------------------------------------------------------------------
 
+void run_thread(int arg){
+    currentThread->space->InitRegisters();		// set the initial register values
+    currentThread->space->RestoreState();
+    machine->Run();
+    ASSERT(FALSE); // machine->Run never returns;
+}
 void
 StartProcess(char *filename)
 {
-    OpenFile *executable = fileSystem->Open(filename);
-    AddrSpace *space;
+    int index = 0, next_index, len = strlen(filename);
+    while (index < len) {
+        for (next_index = index; filename[next_index] != ':' && filename[next_index] != '\0'; next_index++);
 
-    if (executable == NULL) {
-	printf("Unable to open file %s\n", filename);
-	return;
+        filename[next_index] = '\0';
+        OpenFile *executable = fileSystem->Open(filename + index);
+        AddrSpace *space;
+
+        if (executable == NULL) {
+        printf("Unable to open file %s\n", filename);
+        return;
+        }
+        space = new AddrSpace(executable); 
+
+        Thread* p_thread = new Thread(filename + index); 
+        p_thread->space = space;
+
+        delete executable;			// close file
+
+        p_thread->Fork(run_thread, 0);
+		// load page table register
+
+        //machine->Run();			// jump to the user progam
+        index = next_index + 1;
     }
-    space = new AddrSpace(executable);    
-    currentThread->space = space;
-
-    delete executable;			// close file
-
-    space->InitRegisters();		// set the initial register values
-    space->RestoreState();		// load page table register
-
-    machine->Run();			// jump to the user progam
-    ASSERT(FALSE);			// machine->Run never returns;
+    currentThread->Yield();
+    //ASSERT(FALSE);			// machine->Run never returns;
 					// the address space exits
 					// by doing the syscall "exit"
 }

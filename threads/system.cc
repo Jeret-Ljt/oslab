@@ -66,7 +66,7 @@ TimerInterruptHandler(int dummy)
     if (interrupt->getStatus() != IdleMode)
 	interrupt->YieldOnReturn();
 
-    printf("time interrupt! interrrupt current threadid: %d\n", currentThread->get_thread_id());
+    printf("time interrupt! interrrupt current thread: %s\n", currentThread->getName());
 }
 
 //----------------------------------------------------------------------
@@ -107,16 +107,16 @@ Initialize(int argc, char **argv)
 	    	debugArgs = *(argv + 1);
 	    	argCount = 2;
 	    }
-	} else if (!strcmp(*argv, "-rs")) {
+	} else if (!strcmp(*argv, "--rs")) {
 	    ASSERT(argc > 1);
 	    RandomInit(atoi(*(argv + 1)));	// initialize pseudo-random
 						// number generator
 	    randomYield = TRUE;
 	    argCount = 2;
-	} else if (!strcmp(*argv, "-preemptive")){
+	} else if (!strcmp(*argv, "--preemptive")){
         preemptive = TRUE;
         argCount = 1;
-    } else if (!strcmp(*argv, "-enable_timer")){
+    } else if (!strcmp(*argv, "--enable_timer")){
         enable_timer = TRUE;
         argCount = 1;
     }

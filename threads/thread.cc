@@ -66,6 +66,10 @@ Thread::~Thread()
     ASSERT(this != currentThread);
     if (stack != NULL)
 	DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
+#ifdef USER_PROGRAM
+    if (space != NULL) 
+        delete space;
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -193,9 +197,11 @@ Thread::Yield ()
     DEBUG('t', "Yielding thread \"%s\"\n", getName());
     
     nextThread = scheduler->FindNextToRun();
-    if (nextThread != NULL) {
+    if (nextThread != NULL && nextThread->get_priority() <= this->get_priority()) {
 	scheduler->ReadyToRun(this);
 	scheduler->Run(nextThread);
+    }   else{
+        if (nextThread != NULL) scheduler->ReadyToRun(nextThread);
     }
     (void) interrupt->SetLevel(oldLevel);
 }
@@ -219,6 +225,8 @@ Thread::Yield ()
 //	so that there can't be a time slice between pulling the first thread
 //	off the ready list, and switching to it.
 //----------------------------------------------------------------------
+
+
 void
 Thread::Sleep ()
 {

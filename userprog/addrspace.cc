@@ -15,6 +15,7 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#define USER_PROGRAM
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
@@ -97,7 +98,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 					// a separate page, we could set its 
 					// pages to be read-only
     pageTable[i].tmp_disk_page = machine->tmp_disk_offset / PageSize + i;
-    pageTable[i].pid = currentThread->get_thread_id();
+    //pageTable[i].pid = currentThread->get_thread_id();
     }
     
 // zero out the entire address space, to zero the unitialized data segment 
@@ -129,7 +130,11 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
 AddrSpace::~AddrSpace()
 {
-   delete pageTable;
+    for (int i = 0; i < numPages; i++)
+        if (pageTable[i].valid)
+            machine->MBitMap->Clear(pageTable[i].physicalPage);
+
+   delete[] pageTable;
 }
 
 //----------------------------------------------------------------------
