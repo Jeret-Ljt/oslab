@@ -106,6 +106,7 @@ class Thread {
     int get_thread_id(){
         return thread_id;
     }
+    int PhyPageNum;
   private:
     // some of the private data for this class is listed above
     

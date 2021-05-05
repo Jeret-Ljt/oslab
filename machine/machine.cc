@@ -59,8 +59,14 @@ Machine::Machine(bool debug)
     for (i = 0; i < NumTotalRegs; i++)
         registers[i] = 0;
     mainMemory = new char[MemorySize];
+
     for (i = 0; i < MemorySize; i++)
-      	mainMemory[i] = 0;
+      	mainMemory[i] = 0; 
+    
+    MBitMap = new BitMap(MemorySize / PageSize);
+
+    tmp_disk = new char[1024 * 1024]; //1M fake_disk
+    tmp_disk_offset = 0;
 #ifdef USE_TLB
     tlb = new TranslationEntry[TLBSize];
     for (i = 0; i < TLBSize; i++)
@@ -83,6 +89,10 @@ Machine::Machine(bool debug)
 Machine::~Machine()
 {
     delete [] mainMemory;
+    delete [] InvertPageTable;
+    delete [] tmp_disk;
+    delete  MBitMap;
+
     if (tlb != NULL)
         delete [] tlb;
 }

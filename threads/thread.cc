@@ -43,6 +43,7 @@ Thread::Thread(char* threadName, int threadPriority)
 #ifdef USER_PROGRAM
     space = NULL;
     user_id = user_num++;
+    PhyPageNum = 0;
 #endif
 }
 

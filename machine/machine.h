@@ -25,6 +25,7 @@
 #include "utility.h"
 #include "translate.h"
 #include "disk.h"
+#include "bitmap.h"
 
 // Definitions related to the size, and format of user memory
 
@@ -33,8 +34,9 @@
 					// simplicity
 
 #define NumPhysPages    32
-#define MemorySize 	(NumPhysPages * PageSize)
+#define MemorySize 	(NumPhysPages * PageSize) 
 #define TLBSize		4		// if there is a TLB, make it small
+#define PagePerThread 8
 
 enum ExceptionType { NoException,           // Everything ok!
 		     SyscallException,      // A program executed a system call.
@@ -153,9 +155,14 @@ class Machine {
 //
 // Note that *all* communication between the user program and the kernel 
 // are in terms of these data structures.
+	char *tmp_disk;
+	int tmp_disk_offset;
 
+	BitMap* MBitMap;
     char *mainMemory;		// physical memory to store user program,
 				// code and data, while executing
+
+
     int registers[NumTotalRegs]; // CPU registers, for executing user programs
 
 
@@ -188,6 +195,7 @@ class Machine {
 				// simulated instruction
     int runUntilTime;		// drop back into the debugger when simulated
 				// time reaches this value
+
 };
 
 extern void ExceptionHandler(ExceptionType which);

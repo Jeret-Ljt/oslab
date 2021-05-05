@@ -42,6 +42,10 @@ class TranslationEntry {
 			// page is modified.
 
     int last_use_time; // record the time_stamp in which the entry was last used
+
+    int tmp_disk_page; //if valid is false, need to know the page in the "disk"
+
+    int pid; //use for TLB
 };
 
 #endif

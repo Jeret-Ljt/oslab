@@ -55,6 +55,39 @@ ExceptionHandler(ExceptionType which)
     int type = machine->ReadRegister(2);
 
     switch (which){
+        case PageFaultException:
+            int p_page = machine->MBitMap->Find();
+            int v_page = machine->registers[BadVAddrReg] / PageSize;
+            int d_page = machine->pageTable[v_page].tmp_disk_page;
+            if (p_page != -1 && currentThread->PhyPageNum < PagePerThread){
+                machine->pageTable[v_page].physicalPage = p_page;
+                machine->pageTable[v_page].pid = currentThread->get_thread_id();
+                machine->pageTable[v_page].valid = true;
+                machine->pageTable[v_page].dirty = false;
+                machine->pageTable[v_page].last_use_time = stats->totalTicks;
+                currentThread->PhyPageNum++;
+                for (int i = 0; i < PageSize; i++)
+                    machine->mainMemory[p_page * PageSize + i] = machine->tmp_disk[d_page * PageSize + i];
+            }   else{
+                int min_use_time = 0x7fffffff, index, dirty_d_page;
+                for (int i = 0; i < machine->pageTableSize; i++){
+                    if (machine->pageTable[i].last_use_time < min_use_time && machine->pageTable[i].valid == true){
+                        min_use_time = machine->pageTable[i].last_use_time;
+                        index = i;
+                        p_page = machine->pageTable[i].physicalPage;
+                    }
+                }
+                if (machine->pageTable[index].dirty == true){
+                    dirty_d_page = machine->pageTable[index].tmp_disk_page;
+                    for (int i = 0; i < PageSize; i++)
+                        machine->tmp_disk[dirty_d_page * PageSize + i] = machine->mainMemory[p_page * PageSize + i]; //write back;
+                    machine->pageTable[index].dirty = false;
+                }
+                for (int i = 0; i < PageSize; i++)
+                    machine->mainMemory[p_page * PageSize + i] = machine->tmp_disk[d_page * PageSize + i];
+                machine->pageTable[v_page].last_use_time = stats->totalTicks;
+            }
+        break;
         case SyscallException:
             if (type == SC_Halt){
 	            DEBUG('a', "Shutdown, initiated by user program.\n");
@@ -68,7 +101,6 @@ ExceptionHandler(ExceptionType which)
             }
         break;
         case TLBMissException:
-
             printf("TLBMISS! vpage = %d\n", machine->registers[BadVAddrReg] / PageSize);
             stats->numTLBMiss++;
             for (int i = 0; i < machine->pageTableSize; i++){
