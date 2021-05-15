@@ -15,6 +15,7 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#define USER_PROGRAM
 #include "copyright.h"
 #include "system.h"
 #include "addrspace.h"
@@ -86,18 +87,22 @@ AddrSpace::AddrSpace(OpenFile *executable)
     DEBUG('a', "Initializing address space, num pages %d, size %d\n", 
 					numPages, size);
 // first, set up the translation 
-    pageTable = new TranslationEntry[numPages];
-    for (i = 0; i < numPages; i++) {
-	pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
-	pageTable[i].physicalPage = i;
-	pageTable[i].valid = TRUE;
-	pageTable[i].use = FALSE;
-	pageTable[i].dirty = FALSE;
-	pageTable[i].readOnly = FALSE;  // if the code segment was entirely on 
+    
+    InvertTable = new TranslationEntry[NumPhysPages];
+    for (i = 0; i < NumPhysPages; i++) {
+	InvertTable[i].virtualPage = i;	// for now, virtual page # = phys page #
+	InvertTable[i].physicalPage = i;
+	InvertTable[i].valid = TRUE;
+	InvertTable[i].use = FALSE;
+	InvertTable[i].dirty = FALSE;
+	InvertTable[i].readOnly = FALSE;  // if the code segment was entirely on 
 					// a separate page, we could set its 
 					// pages to be read-only
     }
     
+
+#endif
+
 // zero out the entire address space, to zero the unitialized data segment 
 // and the stack segment
     bzero(machine->mainMemory, size);
@@ -125,7 +130,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
 AddrSpace::~AddrSpace()
 {
-   delete pageTable;
+   delete InvertTable;
 }
 
 //----------------------------------------------------------------------
@@ -183,6 +188,6 @@ void AddrSpace::SaveState()
 
 void AddrSpace::RestoreState() 
 {
-    machine->pageTable = pageTable;
-    machine->pageTableSize = numPages;
+    machine->InvertTable = InvertTable;
+    machine->InvertTableSize = numPages;
 }

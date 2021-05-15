@@ -180,8 +180,8 @@ class Machine {
     TranslationEntry *tlb;		// this pointer should be considered 
 					// "read-only" to Nachos kernel code
 
-    TranslationEntry *pageTable;
-    unsigned int pageTableSize;
+    TranslationEntry *InvertTable;
+    unsigned int InvertTableSize;
 
   private:
     bool singleStep;		// drop back into the debugger after each

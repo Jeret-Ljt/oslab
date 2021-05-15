@@ -71,9 +71,9 @@ ExceptionHandler(ExceptionType which)
 
             printf("TLBMISS! vpage = %d\n", machine->registers[BadVAddrReg] / PageSize);
             stats->numTLBMiss++;
-            for (int i = 0; i < machine->pageTableSize; i++){
-                if (machine->registers[BadVAddrReg] / PageSize == machine->pageTable[i].virtualPage){
-                    if (machine->pageTable[i].valid == false){
+            for (int i = 0; i < machine->InvertTableSize; i++){
+                if (machine->registers[BadVAddrReg] / PageSize == machine->InvertTable[i].virtualPage){
+                    if (machine->InvertTable[i].valid == false){
                         machine->RaiseException(PageFaultException, machine->registers[BadVAddrReg]);
                         return;
                     }
@@ -81,7 +81,7 @@ ExceptionHandler(ExceptionType which)
                     bool full = true;
                     for (int j = 0; j < TLBSize; j++)
                         if (machine->tlb[j].valid == false){
-                            machine->tlb[j] = machine->pageTable[i];
+                            machine->tlb[j] = machine->InvertTable[i];
                             full = false;
                             break;
                         }
@@ -96,7 +96,7 @@ ExceptionHandler(ExceptionType which)
                          printf("TLB is full and replace the vpage %d\n", machine->tlb[index].virtualPage);
                          printf("before: \n");
                          machine->PrintTlb();
-                        machine->tlb[index] = machine->pageTable[i];
+                        machine->tlb[index] = machine->InvertTable[i];
                         machine->tlb[index].last_use_time = stats->totalTicks;
                         printf("after\n");
                         machine->PrintTlb();

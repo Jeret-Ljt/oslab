@@ -200,8 +200,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     }
     
     // we must have either a TLB or a page table, but not both!
-    //ASSERT(tlb == NULL || pageTable == NULL);	 now we have both tlb and pageTable
-    ASSERT(tlb != NULL || pageTable != NULL);	
+    //ASSERT(tlb == NULL || InvertTable == NULL);	 now we have both tlb and InvertTable
+    ASSERT(tlb != NULL || InvertTable != NULL);	
 
 // calculate the virtual page number, and offset within the page,
 // from the virtual address
@@ -209,16 +209,19 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     offset = (unsigned) virtAddr % PageSize;
     
     if (tlb == NULL) {		// => page table => vpn is index into table
-	if (vpn >= pageTableSize) {
+	if (vpn >= InvertTableSize) {
 	    DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
-			virtAddr, pageTableSize);
+			virtAddr, InvertTableSize);
 	    return AddressErrorException;
-	} else if (!pageTable[vpn].valid) {
+	} else if (!InvertTable[vpn].valid) {
 	    DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
-			virtAddr, pageTableSize);
+			virtAddr, InvertTableSize);
 	    return PageFaultException;
 	}
-	entry = &pageTable[vpn];
+
+	for (int i = 0; i < NumPhysPages; i++)
+		if (InvertTable[i].virtualPage == vpn && InvertTable[i].valid)
+			entry = &InvertTable[vpn];
     } else {
         for (entry = NULL, i = 0; i < TLBSize; i++)
     	    if (tlb[i].valid && (tlb[i].virtualPage == vpn)) {
