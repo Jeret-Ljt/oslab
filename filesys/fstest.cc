@@ -111,7 +111,7 @@ Print(char *name)
 #define FileName 	"TestFile"
 #define Contents 	"1234567890"
 #define ContentSize 	strlen(Contents)
-#define FileSize 	((int)(ContentSize * 5000))
+#define FileSize 	((int)(ContentSize * 300))
 
 static void 
 FileWrite()
@@ -133,10 +133,12 @@ FileWrite()
     for (i = 0; i < FileSize; i += ContentSize) {
         numBytes = openFile->Write(Contents, ContentSize);
 	if (numBytes < 10) {
-	    printf("Perf test: unable to write %s\n", FileName);
+	    printf("Perf test: unable to write %s, so bad\n", FileName);
 	    delete openFile;
 	    return;
-	}
+	}   else{
+        printf("Perf test: able to write %s once\n", FileName);
+    }
     }
     delete openFile;	// close file
 }
@@ -163,7 +165,9 @@ FileRead()
 	    delete openFile;
 	    delete [] buffer;
 	    return;
-	}
+	}   else{
+        printf("read ok once\n");
+    }
     }
     delete [] buffer;
     delete openFile;	// close file

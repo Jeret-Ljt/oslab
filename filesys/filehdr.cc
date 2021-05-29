@@ -38,18 +38,109 @@
 //	"fileSize" is the bit map of free disk sectors
 //----------------------------------------------------------------------
 
+
+
+void
+IndirectSector::FetchFrom(int sector)
+{
+    synchDisk->ReadSector(sector, (char *)this);
+} 
+
+void
+IndirectSector::WriteBack(int sector)
+{
+    synchDisk->WriteSector(sector, (char *)this); 
+}
+int
+IndirectSector::getSector(int index)
+{
+   return dataSectors[index];
+}
+
+bool
+IndirectSector::Allocate(BitMap *freeMap)
+{ 
+    if (freeMap->NumClear() < NumInIndirect) return FALSE;
+    for (int i = 0; i < NumInIndirect; i++)
+        dataSectors[i] = freeMap->Find();
+    return TRUE;
+}
+
+void
+IndirectSector::Deallocate(BitMap *freeMap)
+{ 
+    for (int i = 0; i < NumInIndirect; i++) {
+	    ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
+	    freeMap->Clear((int) dataSectors[i]);
+    }
+}
+
+
 bool
 FileHeader::Allocate(BitMap *freeMap, int fileSize)
 { 
-    numBytes = fileSize;
-    numSectors  = divRoundUp(fileSize, SectorSize);
-    if (freeMap->NumClear() < numSectors)
-	return FALSE;		// not enough space
+    if (fileSize > MaxFileSize) return FALSE;
 
-    for (int i = 0; i < numSectors; i++)
-	dataSectors[i] = freeMap->Find();
+    numBytes = fileSize;
+    int numTotalSectors = divRoundUp(fileSize, SectorSize);
+    int numDirectSectors = min(numTotalSectors, NumDirect);
+
+
+    int numIndirectSectors = divRoundUp(numTotalSectors - numDirectSectors, NumInIndirect);
+    printf("%d", numIndirectSectors);
+
+    if (freeMap->NumClear() < numDirectSectors + numIndirectSectors + numIndirectSectors * NumInIndirect)
+	    return FALSE;		// not enough space
+    
+    for (int i = 0; i < numDirectSectors; i++)
+	    dataSectors[i] = freeMap->Find();
+
+    for (int i = 0; i < numIndirectSectors; i++){
+        indirectDataSectors[i] = freeMap->Find();
+        IndirectSector* inds = new IndirectSector();
+
+        inds->Allocate(freeMap);
+        inds->WriteBack(indirectDataSectors[i]);
+        delete inds;
+    }
     return TRUE;
 }
+
+bool
+FileHeader::AllocateMore(BitMap *freeMap, int Size)
+{
+    int numTotalSectors = divRoundUp(numBytes, SectorSize);
+    int numDirectSectors = min(numTotalSectors, NumDirect);
+    int numIndirectSectors = divRoundUp(numTotalSectors - numDirectSectors, NumInIndirect);
+    
+
+    if (numBytes + Size > MaxFileSize) return FALSE;
+
+    int new_numBytes = numBytes + Size;
+    int new_numTotalSectors = divRoundUp(new_numBytes, SectorSize);
+    int new_numDirectSectors = min(new_numTotalSectors, NumDirect);
+    int new_numIndirectSectors = divRoundUp(new_numTotalSectors - new_numDirectSectors, NumInIndirect);
+
+    if (freeMap->NumClear() 
+        < new_numDirectSectors - numDirectSectors 
+        + new_numIndirectSectors - numIndirectSectors
+        + (new_numIndirectSectors - numIndirectSectors) * NumInIndirect) 
+            return FALSE;		// not enough space
+
+    for (int i = numDirectSectors; i < new_numDirectSectors; i++)
+        dataSectors[i] = freeMap->Find();
+    
+    for (int i = numIndirectSectors; i < new_numIndirectSectors; i++){
+        indirectDataSectors[i] = freeMap->Find();
+        IndirectSector* inds = new IndirectSector();
+        bool ret = inds->Allocate(freeMap);
+        inds->WriteBack(indirectDataSectors[i]);
+        delete inds;
+    }
+    numBytes += Size;
+    return TRUE;
+}
+
 
 //----------------------------------------------------------------------
 // FileHeader::Deallocate
@@ -60,10 +151,25 @@ FileHeader::Allocate(BitMap *freeMap, int fileSize)
 
 void 
 FileHeader::Deallocate(BitMap *freeMap)
-{
-    for (int i = 0; i < numSectors; i++) {
-	ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
-	freeMap->Clear((int) dataSectors[i]);
+{ 
+    int numTotalSectors = divRoundUp(numBytes, SectorSize);
+    int numDirectSectors = min(numTotalSectors, NumDirect);
+    int numIndirectSectors = divRoundUp(numTotalSectors - numDirectSectors, NumInIndirect);
+
+    for (int i = 0; i < numDirectSectors; i++) {
+	    ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
+	    freeMap->Clear((int) dataSectors[i]);
+    }
+    for (int i = 0; i < numIndirectSectors; i++){
+        IndirectSector* inds = new IndirectSector();
+        
+        inds->FetchFrom(indirectDataSectors[i]);
+        inds->Deallocate(freeMap);
+        
+        ASSERT(freeMap->Test((int) indirectDataSectors[i]));  // ought to be marked!
+	    freeMap->Clear((int) indirectDataSectors[i]);
+
+        delete inds;
     }
 }
 
@@ -106,7 +212,15 @@ FileHeader::WriteBack(int sector)
 int
 FileHeader::ByteToSector(int offset)
 {
-    return(dataSectors[offset / SectorSize]);
+    int sectorIndex = offset / SectorSize;
+    if (sectorIndex < NumDirect) return(dataSectors[sectorIndex]);
+    int indirectSectorIndex = (sectorIndex - NumDirect) / NumInIndirect;   
+    IndirectSector* indirect_sector = new IndirectSector();
+    indirect_sector->FetchFrom(indirectDataSectors[indirectSectorIndex]);
+
+    int ret = indirect_sector->getSector((sectorIndex - NumDirect) % NumInIndirect);
+    delete indirect_sector;
+    return ret;
 }
 
 //----------------------------------------------------------------------
@@ -129,14 +243,18 @@ FileHeader::FileLength()
 void
 FileHeader::Print()
 {
+    int numTotalSectors = divRoundUp(numBytes, SectorSize);
+    int numDirectSectors = min(numTotalSectors, NumDirect);
+    int numIndirectSectors = divRoundUp(numTotalSectors - numDirectSectors, NumInIndirect);
+    
     int i, j, k;
     char *data = new char[SectorSize];
 
     printf("FileHeader contents.  File size: %d.  File blocks:\n", numBytes);
-    for (i = 0; i < numSectors; i++)
+    for (i = 0; i < numDirectSectors; i++)
 	printf("%d ", dataSectors[i]);
     printf("\nFile contents:\n");
-    for (i = k = 0; i < numSectors; i++) {
+    for (i = k = 0; i < numDirectSectors; i++) {
 	synchDisk->ReadSector(dataSectors[i], data);
         for (j = 0; (j < SectorSize) && (k < numBytes); j++, k++) {
 	    if ('\040' <= data[j] && data[j] <= '\176')   // isprint(data[j])
@@ -147,4 +265,8 @@ FileHeader::Print()
         printf("\n"); 
     }
     delete [] data;
+}
+
+void FileHeader::SetType(int type){
+    fileType = type;
 }

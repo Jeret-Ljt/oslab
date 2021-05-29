@@ -46,7 +46,6 @@
 #include "copyright.h"
 
 #include "disk.h"
-#include "bitmap.h"
 #include "directory.h"
 #include "filehdr.h"
 #include "filesys.h"
@@ -85,6 +84,8 @@ FileSystem::FileSystem(bool format)
         Directory *directory = new Directory(NumDirEntries);
 	FileHeader *mapHdr = new FileHeader;
 	FileHeader *dirHdr = new FileHeader;
+    mapHdr->SetType(1);
+    dirHdr->SetType(0);
 
         DEBUG('f', "Formatting the file system.\n");
 
@@ -104,7 +105,7 @@ FileSystem::FileSystem(bool format)
     // reads the file header off of disk (and currently the disk has garbage
     // on it!).
 
-        DEBUG('f', "Writing headers back to disk.\n");
+    DEBUG('f', "Writing headers back to disk.\n");
 	mapHdr->WriteBack(FreeMapSector);    
 	dirHdr->WriteBack(DirectorySector);
 
@@ -339,3 +340,18 @@ FileSystem::Print()
     delete freeMap;
     delete directory;
 } 
+
+bool FileSystem::Resize(OpenFile *pfile, int size){
+    int length = pfile->Length();
+    if (size > length){
+        BitMap *freeMap = new BitMap(NumSectors);
+        freeMap->FetchFrom(freeMapFile);
+        bool ret = pfile->AllocateMore(freeMap, size - length);
+        freeMap->WriteBack(freeMapFile);
+
+        return ret;
+    }   else{
+        printf("not implement yet\n");
+        return FALSE;
+    }
+}

@@ -60,6 +60,7 @@ class OpenFile {
 
 #else // FILESYS
 class FileHeader;
+class BitMap;
 
 class OpenFile {
   public:
@@ -85,8 +86,10 @@ class OpenFile {
 					// file (this interface is simpler 
 					// than the UNIX idiom -- lseek to 
 					// end of file, tell, lseek back 
-    
+
+	bool AllocateMore(BitMap *bitmap, int size);
   private:
+	int hdr_sector;
     FileHeader *hdr;			// Header for this file 
     int seekPosition;			// Current position within the file
 };

@@ -17,8 +17,13 @@
 #include "disk.h"
 #include "bitmap.h"
 
-#define NumDirect 	((SectorSize - 2 * sizeof(int)) / sizeof(int))
-#define MaxFileSize 	(NumDirect * SectorSize)
+#define HdrOtherInfoSize (2 * sizeof(int))
+#define NumIndirect 8
+#define NumDirect ((SectorSize - NumIndirect * sizeof(int) - HdrOtherInfoSize) / sizeof(int))
+#define NumInIndirect (SectorSize / sizeof(int))
+
+
+#define MaxFileSize (NumDirect * SectorSize + NumIndirect * NumInIndirect * SectorSize)
 
 // The following class defines the Nachos "file header" (in UNIX terms,  
 // the "i-node"), describing where on disk to find all of the data in the file.
@@ -35,11 +40,27 @@
 // by allocating blocks for the file (if it is a new file), or by
 // reading it from disk.
 
+class IndirectSector{
+  public:
+      void FetchFrom(int sectorNumber); 	// Initialize file header from disk
+      void WriteBack(int sectorNumber); 	// Write modifications to file header
+      int getSector(int index);
+      bool Allocate(BitMap *bitMap);  // Initialize a IndirectSector, 
+
+      void Deallocate(BitMap *bitMap);  // Initialize a IndirectSector, 
+  private:
+    int dataSectors[NumInIndirect];
+};
+
+
 class FileHeader {
   public:
     bool Allocate(BitMap *bitMap, int fileSize);// Initialize a file header, 
 						//  including allocating space 
 						//  on disk for the file data
+
+    bool AllocateMore(BitMap *bitMap, int Size); // allocatemore
+
     void Deallocate(BitMap *bitMap);  		// De-allocate this file's 
 						//  data blocks
 
@@ -55,11 +76,15 @@ class FileHeader {
 					// in bytes
 
     void Print();			// Print the contents of the file.
+    
+    void SetType(int type);
+
 
   private:
+    int fileType;    //1: file 0: diretory
     int numBytes;			// Number of bytes in the file
-    int numSectors;			// Number of data sectors in the file
-    int dataSectors[NumDirect];		// Disk sector numbers for each data 
+    int dataSectors[NumDirect];		// Disk sector numbers for each data , directly
+    int indirectDataSectors[NumIndirect]; // indirect data sector
 					// block in the file
 };
 

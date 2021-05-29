@@ -31,6 +31,7 @@ OpenFile::OpenFile(int sector)
 { 
     hdr = new FileHeader;
     hdr->FetchFrom(sector);
+    hdr_sector = sector;  //for resize and write it back
     seekPosition = 0;
 }
 
@@ -151,10 +152,15 @@ OpenFile::WriteAt(char *from, int numBytes, int position)
     bool firstAligned, lastAligned;
     char *buf;
 
-    if ((numBytes <= 0) || (position >= fileLength))
-	return 0;				// check request
-    if ((position + numBytes) > fileLength)
-	numBytes = fileLength - position;
+    if ((numBytes <= 0) || (position > fileLength)) return 0;		// check request
+    
+    if ((position + numBytes) > fileLength){
+        if (!fileSystem->Resize(this, position + numBytes)) {
+            printf("writing too much, no more space in disk\n");
+            return 0;
+        }
+	    return WriteAt(from, numBytes, position);
+    }
     DEBUG('f', "Writing %d bytes at %d, from file of length %d.\n", 	
 			numBytes, position, fileLength);
 
@@ -195,3 +201,10 @@ OpenFile::Length()
 { 
     return hdr->FileLength(); 
 }
+
+bool OpenFile::AllocateMore(BitMap* bitMap, int size){
+    bool ret = hdr->AllocateMore(bitMap, size);
+    hdr->WriteBack(hdr_sector); //flush at once
+    return ret;
+}
+
