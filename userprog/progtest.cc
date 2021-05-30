@@ -64,7 +64,7 @@ StartProcess(char *filename)
 // Data structures needed for the console test.  Threads making
 // I/O requests wait on a Semaphore to delay until the I/O completes.
 
-static Console *console;
+static SyncConsole *sync_console;
 static Semaphore *readAvail;
 static Semaphore *writeDone;
 
@@ -73,8 +73,6 @@ static Semaphore *writeDone;
 // 	Wake up the thread that requested the I/O.
 //----------------------------------------------------------------------
 
-static void ReadAvail(int arg) { readAvail->V(); }
-static void WriteDone(int arg) { writeDone->V(); }
 
 //----------------------------------------------------------------------
 // ConsoleTest
@@ -87,15 +85,13 @@ ConsoleTest (char *in, char *out)
 {
     char ch;
 
-    console = new Console(in, out, ReadAvail, WriteDone, 0);
+    sync_console = new SyncConsole(in, out);
     readAvail = new Semaphore("read avail", 0);
     writeDone = new Semaphore("write done", 0);
     
     for (;;) {
-	readAvail->P();		// wait for character to arrive
-	ch = console->GetChar();
-	console->PutChar(ch);	// echo it!
-	writeDone->P() ;        // wait for write to finish
-	if (ch == 'q') return;  // if q, quit
+	    ch = sync_console->GetChar();
+        sync_console->PutChar(ch);
+	    if (ch == 'q') return;  // if q, quit
     }
 }

@@ -17,6 +17,33 @@
 #include "console.h"
 #include "system.h"
 
+
+
+void SyncConsole::ReadAvail() { readAvail->V(); }
+void SyncConsole::WriteDone() { writeDone->V(); }
+static void static_readAvail(int c){
+    SyncConsole *sync_console = (SyncConsole *)c; 
+    sync_console->ReadAvail();
+}
+
+static void static_writeDone(int c){
+    SyncConsole *sync_console = (SyncConsole *)c; 
+    sync_console->WriteDone();
+}
+SyncConsole::SyncConsole(char *readFile, char *writeFile){
+    console = new Console(readFile, writeFile, static_readAvail, static_writeDone, (int) this);
+    readAvail = new Semaphore("read avail", 0);
+    writeDone = new Semaphore("write done", 1);
+}
+
+char SyncConsole::GetChar(){
+    readAvail->P();
+    return console->GetChar();
+}
+void SyncConsole::PutChar(char c){
+    writeDone->P();
+    console->PutChar(c);
+}
 // Dummy functions because C++ is weird about pointers to member functions
 static void ConsoleReadPoll(int c) 
 { Console *console = (Console *)c; console->CheckCharAvail(); }

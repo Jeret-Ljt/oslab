@@ -174,7 +174,7 @@ FileRead()
 }
 
 void
-PerformanceTest()
+PerformanceTest_bak()
 {
     printf("Starting file system performance test:\n");
     stats->Print();
@@ -187,3 +187,17 @@ PerformanceTest()
     stats->Print();
 }
 
+
+void
+PerformanceTest()
+{
+    printf("Starting file system performance test:\n");
+    stats->Print();
+    FileWrite();
+    FileRead();
+    if (!fileSystem->Remove(FileName)) {
+      printf("Perf test: unable to remove %s\n", FileName);
+      return;
+    }
+    stats->Print();
+}

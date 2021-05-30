@@ -35,6 +35,7 @@
 // The interrupt handler "writeDone" is called when an output character 
 // has been "put", so that the next character can be written.
 
+
 class Console {
   public:
     Console(char *readFile, char *writeFile, VoidFunctionPtr readAvail, 
@@ -70,6 +71,27 @@ class Console {
     char incoming;    			// Contains the character to be read,
 					// if there is one available. 
 					// Otherwise contains EOF.
+};
+
+class Semaphore;
+
+class SyncConsole {
+  public:
+    SyncConsole(char *readFile, char *writeFile);
+				// initialize the hardware console device
+    ~SyncConsole();			// clean up console emulation
+
+
+    void ReadAvail();
+    void WriteDone();
+
+    char GetChar();
+    void PutChar(char c);
+
+  private:
+    Console* console;
+    Semaphore *readAvail;
+    Semaphore *writeDone;
 };
 
 #endif // CONSOLE_H
