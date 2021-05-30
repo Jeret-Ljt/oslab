@@ -17,7 +17,6 @@
 #include "copyright.h"
 #include "thread.h"
 #include "switch.h"
-#include "synch.h"
 #include "system.h"
 
 #define STACK_FENCEPOST 0xdeadbeef	// this is put at the top of the

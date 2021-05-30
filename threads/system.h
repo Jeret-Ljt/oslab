@@ -39,7 +39,18 @@ extern int user_num;
 
 #ifdef FILESYS_NEEDED 		// FILESYS or FILESYS_STUB 
 #include "filesys.h"
+
+#define openFileNum 10
+
 extern FileSystem  *fileSystem;
+
+extern Semaphore *readWriteS;
+extern Lock* readWriteL;
+extern int readCount;
+
+extern OpenFile* openFileList[openFileNum];
+extern int openFileListCount[openFileNum];
+
 #endif
 
 #ifdef FILESYS

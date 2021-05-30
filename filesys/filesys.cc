@@ -43,6 +43,8 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#include "system.h"
+
 #include "copyright.h"
 
 #include "disk.h"
@@ -82,10 +84,10 @@ FileSystem::FileSystem(bool format)
     if (format) {
         BitMap *freeMap = new BitMap(NumSectors);
         Directory *directory = new Directory(NumDirEntries);
-	FileHeader *mapHdr = new FileHeader;
-	FileHeader *dirHdr = new FileHeader;
-    mapHdr->SetType(1);
-    dirHdr->SetType(0);
+        FileHeader *mapHdr = new FileHeader;
+        FileHeader *dirHdr = new FileHeader;
+        mapHdr->SetType(1);
+        dirHdr->SetType(0);
 
         DEBUG('f', "Formatting the file system.\n");
 
@@ -225,6 +227,19 @@ FileSystem::Create(char *name, int initialSize)
 //	"name" -- the text name of the file to be opened
 //----------------------------------------------------------------------
 
+void
+FileSystem::Close(OpenFile *file){
+    for (int i = 0; i < openFileNum; i++)
+        if (openFileListCount[i] > 0 && openFileList[i]->GetHdrSector() == file->GetHdrSector()) {
+            openFileListCount[i]--;
+            if (openFileListCount[i] == 0){
+                delete openFileList[i]->GetHdr();
+                delete openFileList[i];
+            }
+            break;
+        }
+}
+
 OpenFile *
 FileSystem::Open(char *name)
 { 
@@ -235,8 +250,26 @@ FileSystem::Open(char *name)
     DEBUG('f', "Opening file %s\n", name);
     directory->FetchFrom(directoryFile);
     sector = directory->Find(name); 
-    if (sector >= 0) 		
-	openFile = new OpenFile(sector);	// name was found in directory 
+    if (sector >= 0) {
+	    for (int i = 0; i < openFileNum; i++)
+            if (openFileListCount[i] > 0 && openFileList[i]->GetHdrSector() == sector) {
+                openFile = new OpenFile(openFileList[i]);
+                openFileListCount[i]++;
+                break;
+            }
+        if (openFile == NULL){
+            for (int i = 0; i < openFileNum; i++)
+                if (openFileListCount[i] <= 0) {
+                    openFileList[i] = new OpenFile(sector);	// name was found in directory
+                    openFileListCount[i] = 1;
+                    openFile = new OpenFile(openFileList[i]);
+                    break;
+                }
+            if (openFile == NULL){
+                printf("too many open file already\n");
+            }
+        }
+    } 
     delete directory;
     return openFile;				// return NULL if not found
 }

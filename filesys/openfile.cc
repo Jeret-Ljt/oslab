@@ -27,11 +27,18 @@
 //	"sector" -- the location on disk of the file header for this file
 //----------------------------------------------------------------------
 
+
+OpenFile::OpenFile(OpenFile* copy)
+{ 
+    hdr = copy->GetHdr();
+    hdrSector = copy->GetHdrSector();  //for resize and write it back
+    seekPosition = 0;
+}
 OpenFile::OpenFile(int sector)
 { 
     hdr = new FileHeader;
     hdr->FetchFrom(sector);
-    hdr_sector = sector;  //for resize and write it back
+    hdrSector = sector;  //for resize and write it back
     seekPosition = 0;
 }
 
@@ -42,7 +49,7 @@ OpenFile::OpenFile(int sector)
 
 OpenFile::~OpenFile()
 {
-    delete hdr;
+    fileSystem->Close(this);
 }
 
 //----------------------------------------------------------------------
@@ -75,16 +82,41 @@ OpenFile::Seek(int position)
 int
 OpenFile::Read(char *into, int numBytes)
 {
+    /*
+    fileSystem->readWriteL->Acquire(); 
+    fileSystem->readCount++;
+    if (fileSystem->readCount == 1) 
+        fileSystem->readWriteS->P();
+    fileSystem->readWriteL->Release();
+*/
+
    int result = ReadAt(into, numBytes, seekPosition);
    seekPosition += result;
+
+/*
+    fileSystem->readWriteL->Acquire(); 
+    fileSystem->readCount--;
+    if (fileSystem->readCount == 0) 
+        fileSystem->readWriteS->V();
+    fileSystem->readWriteL->Release();
+*/
+
    return result;
 }
 
 int
 OpenFile::Write(char *into, int numBytes)
 {
+    /*
+    fileSystem->readWriteS->P();
+    */
    int result = WriteAt(into, numBytes, seekPosition);
    seekPosition += result;
+
+    /*
+    fileSystem->readWriteS->V();
+    */
+   
    return result;
 }
 
@@ -202,9 +234,21 @@ OpenFile::Length()
     return hdr->FileLength(); 
 }
 
+int
+OpenFile::GetHdrSector() 
+{ 
+    return hdrSector;
+}
+
+
+FileHeader*
+OpenFile::GetHdr() 
+{ 
+    return hdr;
+}
 bool OpenFile::AllocateMore(BitMap* bitMap, int size){
     bool ret = hdr->AllocateMore(bitMap, size);
-    hdr->WriteBack(hdr_sector); //flush at once
+    hdr->WriteBack(hdrSector); //flush at once
     return ret;
 }
 

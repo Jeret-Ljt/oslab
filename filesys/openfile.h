@@ -64,6 +64,8 @@ class BitMap;
 
 class OpenFile {
   public:
+	OpenFile(OpenFile* copy);		// Open a file whose header is located
+
     OpenFile(int sector);		// Open a file whose header is located
 					// at "sector" on the disk
     ~OpenFile();			// Close the file
@@ -88,8 +90,13 @@ class OpenFile {
 					// end of file, tell, lseek back 
 
 	bool AllocateMore(BitMap *bitmap, int size);
+
+	int GetHdrSector();
+	FileHeader* GetHdr();
+
+
   private:
-	int hdr_sector;
+	int hdrSector;
     FileHeader *hdr;			// Header for this file 
     int seekPosition;			// Current position within the file
 };

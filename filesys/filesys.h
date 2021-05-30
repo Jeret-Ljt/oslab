@@ -65,6 +65,12 @@ class FileSystem {
 };
 
 #else // FILESYS
+
+
+#define openFileNum 10
+
+class Semaphore;
+class Lock;
 class FileSystem {
   public:
     FileSystem(bool format);		// Initialize the file system.
@@ -81,16 +87,22 @@ class FileSystem {
 
     bool Remove(char *name);  		// Delete a file (UNIX unlink)
 
+	void Close(OpenFile* file);
+
     void List();			// List all the files in the file system
 
     void Print();			// List all the files and their contents
 
 	bool Resize(OpenFile *pfile, int size);
+
+
   private:
    OpenFile* freeMapFile;		// Bit map of free disk blocks,
 					// represented as a file
    OpenFile* directoryFile;		// "Root" directory -- list of 
 					// file names, represented as a file
+
+
 };
 
 #endif // FILESYS
