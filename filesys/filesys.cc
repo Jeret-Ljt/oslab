@@ -44,9 +44,7 @@
 // of liability and disclaimer of warranty provisions.
 
 #include "system.h"
-
 #include "copyright.h"
-
 #include "disk.h"
 #include "directory.h"
 #include "filehdr.h"
@@ -229,6 +227,8 @@ FileSystem::Create(char *name, int initialSize)
 
 void
 FileSystem::Close(OpenFile *file){
+
+    openFileLock->Acquire();
     for (int i = 0; i < openFileNum; i++)
         if (openFileListCount[i] > 0 && openFileList[i]->GetHdrSector() == file->GetHdrSector()) {
             openFileListCount[i]--;
@@ -238,11 +238,12 @@ FileSystem::Close(OpenFile *file){
             }
             break;
         }
+    openFileLock->Release();
 }
 
 OpenFile *
 FileSystem::Open(char *name)
-{ 
+{
     Directory *directory = new Directory(NumDirEntries);
     OpenFile *openFile = NULL;
     int sector;
@@ -251,16 +252,17 @@ FileSystem::Open(char *name)
     directory->FetchFrom(directoryFile);
     sector = directory->Find(name); 
     if (sector >= 0) {
+        openFileLock->Acquire();
 	    for (int i = 0; i < openFileNum; i++)
-            if (openFileListCount[i] > 0 && openFileList[i]->GetHdrSector() == sector) {
+            if (openFileListCount[i] > 0 && openFileList[i]->GetHdrSector() == sector) { //already open
                 openFile = new OpenFile(openFileList[i]);
                 openFileListCount[i]++;
                 break;
             }
-        if (openFile == NULL){
-            for (int i = 0; i < openFileNum; i++)
+        if (openFile == NULL){      //first open
+            for (int i = 0; i < openFileNum; i++)   
                 if (openFileListCount[i] <= 0) {
-                    openFileList[i] = new OpenFile(sector);	// name was found in directory
+                    openFileList[i] = new OpenFile(sector);	
                     openFileListCount[i] = 1;
                     openFile = new OpenFile(openFileList[i]);
                     break;
@@ -269,6 +271,7 @@ FileSystem::Open(char *name)
                 printf("too many open file already\n");
             }
         }
+        openFileLock->Release();
     } 
     delete directory;
     return openFile;				// return NULL if not found

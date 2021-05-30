@@ -67,10 +67,6 @@ class FileSystem {
 #else // FILESYS
 
 
-#define openFileNum 10
-
-class Semaphore;
-class Lock;
 class FileSystem {
   public:
     FileSystem(bool format);		// Initialize the file system.

@@ -50,7 +50,7 @@ extern int readCount;
 
 extern OpenFile* openFileList[openFileNum];
 extern int openFileListCount[openFileNum];
-
+extern Lock* openFileLock;
 #endif
 
 #ifdef FILESYS

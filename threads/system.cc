@@ -24,12 +24,10 @@ int thread_num = 0;
 #ifdef FILESYS_NEEDED
 FileSystem  *fileSystem;
 
-Semaphore *readWriteS;
-Lock* readWriteL;
-int readCount;
-
 OpenFile* openFileList[openFileNum];
 int openFileListCount[openFileNum];
+Lock* openFileLock;
+
 #endif
 
 #ifdef FILESYS
@@ -179,6 +177,7 @@ Initialize(int argc, char **argv)
     
     for (int i = 0; i < openFileNum; i++) 
         openFileListCount[i] = 0;
+    openFileLock = new Lock("open File Lock");
 #endif
 
 #ifdef NETWORK

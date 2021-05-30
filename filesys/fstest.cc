@@ -110,37 +110,45 @@ Print(char *name)
 
 #define FileName 	"TestFile"
 #define Contents 	"1234567890"
-#define ContentSize 	strlen(Contents)
+#define ContentSize  strlen(Contents)
 #define FileSize 	((int)(ContentSize * 300))
 
 static void 
 FileWrite()
 {
-    OpenFile *openFile;    
+    OpenFile *openFile[10];    
     int i, numBytes;
 
-    printf("Sequential write of %d byte file, in %d byte chunks\n", 
-	FileSize, ContentSize);
+    printf("Sequential write of %d byte file, in %d byte chunks\n",  FileSize, ContentSize);
     if (!fileSystem->Create(FileName, 0)) {
-      printf("Perf test: can't create %s\n", FileName);
-      return;
+        printf("Perf test: can't create %s\n", FileName);
+        return;
     }
-    openFile = fileSystem->Open(FileName);
-    if (openFile == NULL) {
-	printf("Perf test: unable to open %s\n", FileName);
-	return;
+
+    for (int j = 0; j < 10; j++){
+        if (j > 0) continue;
+        openFile[j]= fileSystem->Open(FileName);
+        
+        if (openFile[j] == NULL) {
+            printf("Perf test: unable to open %s\n", FileName);
+            return;
+        }
+        openFile[j]->Seek(openFile[j]->Length());
+
+        for (i = 0; i < FileSize; i += ContentSize) {
+            numBytes = openFile[j]->Write(Contents, ContentSize);
+            if (numBytes < 10) {
+                printf("Perf test: unable to write %s, so bad\n", FileName);
+                delete openFile[j];
+                return;
+            }   else{
+                printf("Perf test: able to write %s once\n", FileName);
+            }
+        }
     }
-    for (i = 0; i < FileSize; i += ContentSize) {
-        numBytes = openFile->Write(Contents, ContentSize);
-	if (numBytes < 10) {
-	    printf("Perf test: unable to write %s, so bad\n", FileName);
-	    delete openFile;
-	    return;
-	}   else{
-        printf("Perf test: able to write %s once\n", FileName);
-    }
-    }
-    delete openFile;	// close file
+
+    for (int j = 0; j < 1; j++)
+        delete openFile[j];
 }
 
 static void 

@@ -30,8 +30,8 @@
 
 OpenFile::OpenFile(OpenFile* copy)
 { 
-    hdr = copy->GetHdr();
-    hdrSector = copy->GetHdrSector();  //for resize and write it back
+    hdr = copy->GetHdr(); //in case hdr will be changed, for example, for resize
+    hdrSector = copy->GetHdrSector();  
     seekPosition = 0;
 }
 OpenFile::OpenFile(int sector)
