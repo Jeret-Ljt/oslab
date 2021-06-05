@@ -113,64 +113,79 @@ Print(char *name)
 #define ContentSize 	strlen(Contents)
 #define FileSize 	((int)(ContentSize * 300))
 
+void ThreadWrite(int pid){
+        FileDescribeTable* fdTable = fileSystem->fdOpen(FileName);
+        if (fdTable == NULL) {
+            printf("Perf test: unable to open %s\n", FileName);
+            return;
+        }
+        fdTable->Seek(pid * FileSize / 5);
+        for (int i = 0; i < FileSize / 5; i += ContentSize) {
+            int numBytes = fdTable->Write(Contents, ContentSize);
+            if (numBytes < 10) {
+                printf("Perf test: unable to write %s, so bad\n", FileName);
+                return;
+            }   else{
+                printf("thread %s able to write %s from position %d\n",
+                 currentThread->getName(), Contents, fdTable->GetPosition() - 10
+                 );
+            }
+        }
+}
+
+void ThreadRead(int pid){
+        char *buffer = new char[ContentSize];
+        FileDescribeTable* fdTable = fileSystem->fdOpen(FileName);
+        if (fdTable == NULL) {
+            printf("Perf test: unable to open %s\n", FileName);
+            return;
+        }
+        fdTable->Seek(pid * FileSize / 5);
+        for (int i = 0; i < FileSize / 5; i += ContentSize) {
+            int numBytes = fdTable->Read(buffer, ContentSize);
+            if ((numBytes < 10) || strncmp(buffer, Contents, ContentSize)) {
+                printf("Perf test: unable to read %s\n", FileName);
+                delete [] buffer;
+                return;
+            }   else{
+                printf("thread %s able to read %s from position %d\n",
+                 currentThread->getName(), Contents, fdTable->GetPosition() - 10
+                 );
+            }
+        }
+    delete [] buffer;
+}
 static void 
 FileWrite()
 {
-    OpenFile *openFile;    
-    int i, numBytes;
-
     printf("Sequential write of %d byte file, in %d byte chunks\n", 
 	FileSize, ContentSize);
-    if (!fileSystem->Create(FileName, 0)) {
+
+    if (!fileSystem->Create(FileName, FileSize)) {
       printf("Perf test: can't create %s\n", FileName);
       return;
     }
-    openFile = fileSystem->Open(FileName);
-    if (openFile == NULL) {
-	printf("Perf test: unable to open %s\n", FileName);
-	return;
+
+    for (int i = 0; i < 5; i++){
+        char buf[30];
+        sprintf(buf, "Writing Thread %d", i);
+        printf("%s", buf);
+        Thread* t = new Thread(buf, 0);
+        t->Fork(ThreadWrite, i);
     }
-    for (i = 0; i < FileSize; i += ContentSize) {
-        numBytes = openFile->Write(Contents, ContentSize);
-	if (numBytes < 10) {
-	    printf("Perf test: unable to write %s, so bad\n", FileName);
-	    delete openFile;
-	    return;
-	}   else{
-        printf("Perf test: able to write %s once\n", FileName);
-    }
-    }
-    delete openFile;	// close file
 }
 
 static void 
-FileRead()
-{
-    OpenFile *openFile;    
-    char *buffer = new char[ContentSize];
-    int i, numBytes;
-
+FileRead() {
     printf("Sequential read of %d byte file, in %d byte chunks\n", 
 	FileSize, ContentSize);
 
-    if ((openFile = fileSystem->Open(FileName)) == NULL) {
-	printf("Perf test: unable to open file %s\n", FileName);
-	delete [] buffer;
-	return;
+    for (int i = 0; i < 5; i++){
+        char buf[30];
+        sprintf(buf, "Reading Thread %d", i);
+        Thread *t = new Thread(buf);
+        t->Fork(ThreadRead, i);
     }
-    for (i = 0; i < FileSize; i += ContentSize) {
-        numBytes = openFile->Read(buffer, ContentSize);
-	if ((numBytes < 10) || strncmp(buffer, Contents, ContentSize)) {
-	    printf("Perf test: unable to read %s\n", FileName);
-	    delete openFile;
-	    delete [] buffer;
-	    return;
-	}   else{
-        printf("read ok once\n");
-    }
-    }
-    delete [] buffer;
-    delete openFile;	// close file
 }
 
 void
@@ -179,6 +194,7 @@ PerformanceTest_bak()
     printf("Starting file system performance test:\n");
     stats->Print();
     FileWrite();
+    
     FileRead();
     if (!fileSystem->Remove(FileName)) {
       printf("Perf test: unable to remove %s\n", FileName);
@@ -193,8 +209,11 @@ PerformanceTest()
 {
     printf("Starting file system performance test:\n");
     stats->Print();
+
     FileWrite();
+    
     FileRead();
+
     if (!fileSystem->Remove(FileName)) {
       printf("Perf test: unable to remove %s\n", FileName);
       return;

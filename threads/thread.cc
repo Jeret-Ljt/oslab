@@ -35,7 +35,11 @@
 Thread::Thread(char* threadName, int threadPriority)
 {
     priority = threadPriority;
-    name = threadName;
+
+    
+    name = new char[strlen(threadName)];
+    memcpy(name, threadName, strlen(threadName));
+
     stackTop = NULL;
     stack = NULL;
     status = JUST_CREATED;
@@ -66,6 +70,8 @@ Thread::~Thread()
     ASSERT(this != currentThread);
     if (stack != NULL)
 	DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
+    if (name!=NULL)
+        delete[] name;
 #ifdef USER_PROGRAM
     if (space != NULL) 
         delete space;

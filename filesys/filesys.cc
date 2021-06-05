@@ -43,12 +43,14 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
-#include "copyright.h"
+#define FILESYS_NEEDED
 
+#include "copyright.h"
 #include "disk.h"
 #include "directory.h"
 #include "filehdr.h"
 #include "filesys.h"
+#include "synch.h"
 
 // Sectors containing the file headers for the bitmap of free sectors,
 // and the directory of files.  These file headers are placed in well-known 
@@ -63,6 +65,41 @@
 #define NumDirEntries 		10
 #define DirectoryFileSize 	(sizeof(DirectoryEntry) * NumDirEntries)
 
+
+
+FileDescribeTable::FileDescribeTable(int _fd, FileSystem* _fileSys){
+    fd = _fd;
+    fileSys = _fileSys;
+    position = 0;
+}
+
+
+FileDescribeTable::~FileDescribeTable(){ fileSys->fdClose(fd);}
+
+int FileDescribeTable::GetFd(){return fd;}
+
+void FileDescribeTable::Seek(int p){
+    position = p;
+}
+int FileDescribeTable::Read(char *buf, int numByte){
+    OpenFile* openFile = fileSys->GetOpenFile(fd);
+    int ret = openFile->ReadAt(buf, numByte, position);
+    position += ret;
+    return ret;
+}
+int FileDescribeTable::Write(char *buf, int numByte){
+    OpenFile* openFile = fileSys->GetOpenFile(fd);
+    int ret = openFile->WriteAt(buf, numByte, position);
+    position += ret;
+    return ret;
+}
+int FileDescribeTable::Length(){
+    OpenFile* openFile = fileSys->GetOpenFile(fd);
+    return openFile->Length();
+}
+int FileDescribeTable::GetPosition(){
+    return position;
+}
 //----------------------------------------------------------------------
 // FileSystem::FileSystem
 // 	Initialize the file system.  If format = TRUE, the disk has
@@ -80,6 +117,9 @@ FileSystem::FileSystem(bool format)
 { 
     DEBUG('f', "Initializing the file system.\n");
     if (format) {
+        for (int i = 0; i < OpenFileNum; i++) openFileList[i] = NULL;
+        openFileListLock = new Lock("openFileListLock");
+
         BitMap *freeMap = new BitMap(NumSectors);
         Directory *directory = new Directory(NumDirEntries);
 	FileHeader *mapHdr = new FileHeader;
@@ -215,6 +255,7 @@ FileSystem::Create(char *name, int initialSize)
     return success;
 }
 
+
 //----------------------------------------------------------------------
 // FileSystem::Open
 // 	Open a file for reading and writing.  
@@ -224,6 +265,66 @@ FileSystem::Create(char *name, int initialSize)
 //
 //	"name" -- the text name of the file to be opened
 //----------------------------------------------------------------------
+
+void
+FileSystem::fdClose(int fd)
+{ 
+    openFileListLock->Acquire();
+    openFileList[fd]->referenceCount--;
+    if (openFileList[fd]->referenceCount == 0){
+        delete openFileList[fd];
+        openFileList[fd] = NULL;
+    }
+    openFileListLock->Release();
+    		// return NULL if not found
+}
+
+OpenFile* FileSystem::GetOpenFile(int fd){
+    OpenFile* ret;
+    openFileListLock->Acquire();
+    ret = openFileList[fd];
+    openFileListLock->Release();
+    return ret;
+}
+
+FileDescribeTable *
+FileSystem::fdOpen(char *name)
+{ 
+    Directory *directory = new Directory(NumDirEntries);
+    FileDescribeTable* fdTabel = NULL;
+    int sector;
+
+    DEBUG('f', "Opening file %s\n", name);
+    directory->FetchFrom(directoryFile);
+    sector = directory->Find(name); 
+    if (sector >= 0) {
+        openFileListLock->Acquire();
+        for (int i = 0; i < OpenFileNum; i++){
+            if (openFileList[i] == NULL) continue;
+            if (openFileList[i]->GetHdrSector() == sector) {
+                openFileList[i]->referenceCount++;
+                fdTabel = new FileDescribeTable(i, this);
+                break;
+            }
+        }
+        if (fdTabel == NULL){
+            for (int i = 0; i < OpenFileNum; i++){
+                if (openFileList[i] == NULL) {
+                    openFileList[i] = new OpenFile(sector);
+                    fdTabel = new FileDescribeTable(i, this);
+                    break;
+                }
+            }
+
+            if (fdTabel == NULL){
+                printf("too much openFILE, no more space!\n");
+            }
+        }
+        openFileListLock->Release();
+    }
+    delete directory;
+    return fdTabel;				// return NULL if not found
+}
 
 OpenFile *
 FileSystem::Open(char *name)
@@ -270,6 +371,10 @@ FileSystem::Remove(char *name)
        delete directory;
        return FALSE;			 // file not found 
     }
+
+    for (int i = 0; i < OpenFileNum; i++)
+        if (openFileList[i] != NULL && openFileList[i]->GetHdrSector() == sector) return FALSE;
+    
     fileHdr = new FileHeader;
     fileHdr->FetchFrom(sector);
 
@@ -342,7 +447,7 @@ FileSystem::Print()
 } 
 
 bool FileSystem::Resize(OpenFile *pfile, int size){
-    int length = pfile->Length();
+    int length = pfile->Length(true); //reszize must be called by Write
     if (size > length){
         BitMap *freeMap = new BitMap(NumSectors);
         freeMap->FetchFrom(freeMapFile);

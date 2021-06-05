@@ -15,6 +15,7 @@
 #include "filehdr.h"
 #include "openfile.h"
 #include "system.h"
+#include "synch.h"
 #ifdef HOST_SPARC
 #include <strings.h>
 #endif
@@ -31,8 +32,13 @@ OpenFile::OpenFile(int sector)
 { 
     hdr = new FileHeader;
     hdr->FetchFrom(sector);
-    hdr_sector = sector;  //for resize and write it back
+    hdrSector = sector;  //for resize and write it back
     seekPosition = 0;
+    referenceCount = 1;
+
+    readCount = 0;
+	readCountLock = new Lock("read Count Lock");
+	readWriteSemaphore = new Semaphore("read Write Semaphoe", 1);
 }
 
 //----------------------------------------------------------------------
@@ -75,8 +81,11 @@ OpenFile::Seek(int position)
 int
 OpenFile::Read(char *into, int numBytes)
 {
+ 
    int result = ReadAt(into, numBytes, seekPosition);
    seekPosition += result;
+   
+
    return result;
 }
 
@@ -115,8 +124,14 @@ OpenFile::Write(char *into, int numBytes)
 //----------------------------------------------------------------------
 
 int
-OpenFile::ReadAt(char *into, int numBytes, int position)
+OpenFile::ReadAt(char *into, int numBytes, int position, bool onWrite)
 {
+    if (!onWrite) { //if it is called from Write, alreday locking
+        readCountLock->Acquire();
+        readCount++;
+        if (readCount == 1) readWriteSemaphore->P();
+        readCountLock->Release();
+    }
     int fileLength = hdr->FileLength();
     int i, firstSector, lastSector, numSectors;
     char *buf;
@@ -132,14 +147,24 @@ OpenFile::ReadAt(char *into, int numBytes, int position)
     lastSector = divRoundDown(position + numBytes - 1, SectorSize);
     numSectors = 1 + lastSector - firstSector;
 
+
     // read in all the full and partial sectors that we need
     buf = new char[numSectors * SectorSize];
     for (i = firstSector; i <= lastSector; i++)	
         synchDisk->ReadSector(hdr->ByteToSector(i * SectorSize), 
 					&buf[(i - firstSector) * SectorSize]);
 
+  
+
     // copy the part we want
     bcopy(&buf[position - (firstSector * SectorSize)], into, numBytes);
+
+    if (!onWrite) {
+        readCountLock->Acquire();
+        readCount--;
+        if (readCount == 0) readWriteSemaphore->V();
+        readCountLock->Release();
+    }
     delete [] buf;
     return numBytes;
 }
@@ -147,19 +172,22 @@ OpenFile::ReadAt(char *into, int numBytes, int position)
 int
 OpenFile::WriteAt(char *from, int numBytes, int position)
 {
+    readWriteSemaphore->P();
     int fileLength = hdr->FileLength();
     int i, firstSector, lastSector, numSectors;
     bool firstAligned, lastAligned;
     char *buf;
 
-    if ((numBytes <= 0) || (position > fileLength)) return 0;		// check request
-    
+    if ((numBytes <= 0) || (position > fileLength)) {
+        readWriteSemaphore->V();
+        return 0;		// check request
+    }
     if ((position + numBytes) > fileLength){
         if (!fileSystem->Resize(this, position + numBytes)) {
             printf("writing too much, no more space in disk\n");
+            readWriteSemaphore->V();
             return 0;
         }
-	    return WriteAt(from, numBytes, position);
     }
     DEBUG('f', "Writing %d bytes at %d, from file of length %d.\n", 	
 			numBytes, position, fileLength);
@@ -175,10 +203,10 @@ OpenFile::WriteAt(char *from, int numBytes, int position)
 
 // read in first and last sector, if they are to be partially modified
     if (!firstAligned)
-        ReadAt(buf, SectorSize, firstSector * SectorSize);	
+        ReadAt(buf, SectorSize, firstSector * SectorSize, true);	
     if (!lastAligned && ((firstSector != lastSector) || firstAligned))
         ReadAt(&buf[(lastSector - firstSector) * SectorSize], 
-				SectorSize, lastSector * SectorSize);	
+				SectorSize, lastSector * SectorSize, true);	
 
 // copy in the bytes we want to change 
     bcopy(from, &buf[position - (firstSector * SectorSize)], numBytes);
@@ -188,6 +216,8 @@ OpenFile::WriteAt(char *from, int numBytes, int position)
         synchDisk->WriteSector(hdr->ByteToSector(i * SectorSize), 
 					&buf[(i - firstSector) * SectorSize]);
     delete [] buf;
+
+    readWriteSemaphore->V();
     return numBytes;
 }
 
@@ -197,14 +227,34 @@ OpenFile::WriteAt(char *from, int numBytes, int position)
 //----------------------------------------------------------------------
 
 int
-OpenFile::Length() 
+OpenFile::Length(bool onWrite) 
 { 
-    return hdr->FileLength(); 
-}
+    if (!onWrite) {
+        readCountLock->Acquire();
+        readCount++;
+        if (readCount == 1) readWriteSemaphore->P();
+        readCountLock->Release();
+    }
 
-bool OpenFile::AllocateMore(BitMap* bitMap, int size){
-    bool ret = hdr->AllocateMore(bitMap, size);
-    hdr->WriteBack(hdr_sector); //flush at once
+    int ret = hdr->FileLength(); 
+
+    if (!onWrite){
+        readCountLock->Acquire();
+        readCount--;
+        if (readCount == 0) readWriteSemaphore->V();
+        readCountLock->Release();
+    }
     return ret;
 }
 
+bool OpenFile::AllocateMore(BitMap* bitMap, int size){
+    //readWriteSemaphore->P(); only will be call by OpenFile::WriteAt, no need to P again.
+   
+    bool ret = hdr->AllocateMore(bitMap, size);
+    hdr->WriteBack(hdrSector); //flush at once
+    //readWriteSemaphore->V();
+
+    return ret;
+}
+
+int OpenFile::GetHdrSector(){return hdrSector;}

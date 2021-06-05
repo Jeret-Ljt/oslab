@@ -5,6 +5,7 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+
 #include "copyright.h"
 #include "system.h"
 
@@ -19,14 +20,18 @@ Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 					// for invoking context switches
 
+
+
 int thread_num = 0;
 
 #ifdef FILESYS_NEEDED
 FileSystem  *fileSystem;
+
 #endif
 
 #ifdef FILESYS
 SynchDisk   *synchDisk;
+
 #endif
 
 #ifdef USER_PROGRAM	// requires either FILESYS or FILESYS_STUB
@@ -141,6 +146,7 @@ Initialize(int argc, char **argv)
 #endif
     }
 
+
     DebugInit(debugArgs);			// initialize DEBUG messages
     stats = new Statistics();			// collect statistics
     interrupt = new Interrupt;			// start up interrupt handling
@@ -169,6 +175,7 @@ Initialize(int argc, char **argv)
 
 #ifdef FILESYS_NEEDED
     fileSystem = new FileSystem(format);
+
 #endif
 
 #ifdef NETWORK

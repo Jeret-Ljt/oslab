@@ -38,6 +38,7 @@
 #include "copyright.h"
 #include "openfile.h"
 
+
 #ifdef FILESYS_STUB 		// Temporarily implement file system calls as 
 				// calls to UNIX, until the real file system
 				// implementation is available
@@ -65,6 +66,28 @@ class FileSystem {
 };
 
 #else // FILESYS
+
+class FileSystem;
+#define OpenFileNum 20
+class FileDescribeTable{
+	public:
+	FileDescribeTable(int _fd, FileSystem* _fileSys);
+	~FileDescribeTable();
+	int GetFd();
+
+	void Seek(int p);
+	int Read(char *buf, int numByte);
+	int Write(char *buf, int numByte);
+	int Length();
+	int GetPosition();
+	private:
+	FileSystem* fileSys; //the filesys belonging to
+	int fd;
+	int position;
+};
+
+
+class Lock;
 class FileSystem {
   public:
     FileSystem(bool format);		// Initialize the file system.
@@ -79,18 +102,29 @@ class FileSystem {
 
     OpenFile* Open(char *name); 	// Open a file (UNIX open)
 
-    bool Remove(char *name);  		// Delete a file (UNIX unlink)
+	FileDescribeTable* fdOpen(char *name);
+
+	OpenFile* GetOpenFile(int fd);
+
+	void fdClose(int fd);
+    
+	bool Remove(char *name);  		// Delete a file (UNIX unlink)
 
     void List();			// List all the files in the file system
 
     void Print();			// List all the files and their contents
 
 	bool Resize(OpenFile *pfile, int size);
+
+
   private:
    OpenFile* freeMapFile;		// Bit map of free disk blocks,
 					// represented as a file
    OpenFile* directoryFile;		// "Root" directory -- list of 
 					// file names, represented as a file
+
+	OpenFile *openFileList[OpenFileNum];
+	Lock* openFileListLock;
 };
 
 #endif // FILESYS

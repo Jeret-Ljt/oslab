@@ -573,7 +573,10 @@ filesys.o: ../filesys/filesys.cc ../threads/copyright.h ../machine/disk.h \
  /usr/include/i386-linux-gnu/bits/sys_errlist.h /usr/include/string.h \
  /usr/include/xlocale.h ../filesys/directory.h ../filesys/openfile.h \
  ../filesys/filehdr.h ../userprog/bitmap.h ../filesys/openfile.h \
- ../filesys/filesys.h
+ ../filesys/filesys.h ../threads/synch.h ../threads/thread.h \
+ ../threads/utility.h ../machine/machine.h ../machine/translate.h \
+ ../machine/disk.h ../userprog/addrspace.h ../filesys/filesys.h \
+ ../threads/list.h
 fstest.o: ../filesys/fstest.cc ../threads/copyright.h \
  ../threads/utility.h ../threads/copyright.h ../threads/bool.h \
  ../machine/sysdep.h /usr/include/stdio.h /usr/include/features.h \

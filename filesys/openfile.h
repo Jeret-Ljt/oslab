@@ -62,6 +62,8 @@ class OpenFile {
 class FileHeader;
 class BitMap;
 
+class Lock;
+class Semaphore;
 class OpenFile {
   public:
     OpenFile(int sector);		// Open a file whose header is located
@@ -77,21 +79,30 @@ class OpenFile {
 					// and increment position in file.
     int Write(char *from, int numBytes);
 
-    int ReadAt(char *into, int numBytes, int position);
+    int ReadAt(char *into, int numBytes, int position, bool onWriting = false);
     					// Read/write bytes from the file,
 					// bypassing the implicit position.
     int WriteAt(char *from, int numBytes, int position);
 
-    int Length(); 			// Return the number of bytes in the
+    int Length(bool onWrite = false); 			// Return the number of bytes in the
 					// file (this interface is simpler 
 					// than the UNIX idiom -- lseek to 
 					// end of file, tell, lseek back 
 
 	bool AllocateMore(BitMap *bitmap, int size);
+
+	int GetHdrSector();
+
+	int referenceCount; //easy for filesys to change
   private:
-	int hdr_sector;
+	int hdrSector;
     FileHeader *hdr;			// Header for this file 
     int seekPosition;			// Current position within the file
+
+	int readCount;
+	Lock* readCountLock;
+	Semaphore* readWriteSemaphore;
+	
 };
 
 #endif // FILESYS
