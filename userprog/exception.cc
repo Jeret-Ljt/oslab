@@ -53,10 +53,105 @@ ExceptionHandler(ExceptionType which)
 {
     int type = machine->ReadRegister(2);
 
-    if ((which == SyscallException) && (type == SC_Halt)) {
-	DEBUG('a', "Shutdown, initiated by user program.\n");
-   	interrupt->Halt();
-    } else {
+    if (which == SyscallException){
+        if (type == SC_Halt) {
+	        DEBUG('a', "Shutdown, initiated by user program.\n");
+   	        interrupt->Halt();
+        } else
+        if (type == SC_Exit){
+            int arg = machine->ReadRegister(4);
+            if (arg == 0)
+                currentThread->Finish();
+            else{
+                printf("exit value not = 0\n");
+                ASSERT(0);
+
+            }
+        }   else
+        if (type == SC_Create){
+            int ptr = machine->ReadRegister(4);
+            char *name = new char[100];
+            for (int i = 0; i < 100; i++) name[i] = 0;
+            int len = 0;
+
+            do{
+                int value;
+                machine->ReadMem(ptr, 1, &value);
+                ptr++;
+                name[len++] = (char)value;
+            }   while (name[len-1] != 0);
+
+            fileSystem->Create(name, 0);
+
+            delete[] name;
+            int pc = machine->ReadRegister(PCReg);
+            machine->WriteRegister(PCReg, pc + 4);
+            machine->WriteRegister(NextPCReg, pc + 8);
+        }else 
+        if (type == SC_Open){
+            int ptr = machine->ReadRegister(4);
+            char *name = new char[100];
+            for (int i = 0; i < 100; i++) name[i] = 0;
+            int len = 0;
+            do{
+                int value;
+                machine->ReadMem(ptr, 1, &value);
+                ptr++;
+                name[len++] = (char)value;
+            }   while (name[len-1] != 0);
+            OpenFile* opFile = fileSystem->Open(name);
+            delete[] name;
+
+            machine->WriteRegister(2, opFile->GetFD());
+            int pc = machine->ReadRegister(PCReg);
+            machine->WriteRegister(PCReg, pc + 4);
+            machine->WriteRegister(NextPCReg, pc + 8);
+        }   else
+        if (type == SC_Close){
+            int fd = machine->ReadRegister(4);
+            Close(fd);
+            int pc = machine->ReadRegister(PCReg);
+            machine->WriteRegister(PCReg, pc + 4);
+            machine->WriteRegister(NextPCReg, pc + 8);
+        }   else
+        if (type == SC_Write){
+            int ptr = machine->ReadRegister(4);
+            char *buf = new char[100];
+            for (int i = 0; i < 100; i++) buf[i] = 0;
+            int len = 0;
+            do{
+                int value;
+                machine->ReadMem(ptr, 1, &value);
+                ptr++;
+                buf[len++] = (char)value;
+            }   while (buf[len-1] != 0);
+
+
+            int size = machine->ReadRegister(5);
+            int fd = machine->ReadRegister(6);
+            WriteFile(fd, buf, size);
+
+            int pc = machine->ReadRegister(PCReg);
+            machine->WriteRegister(PCReg, pc + 4);
+            machine->WriteRegister(NextPCReg, pc + 8);
+        } else
+        if (type == SC_Read){
+            int ptr = machine->ReadRegister(4);
+            int size = machine->ReadRegister(5);
+            int fd = machine->ReadRegister(6);
+            char *buf = new char[size];
+            
+            Read(fd, buf, size);
+
+            for (int i = 0; i < size; i++)
+                machine->WriteMem(ptr + i, 1, int (buf[i]));
+            
+            int pc = machine->ReadRegister(PCReg);
+            machine->WriteRegister(PCReg, pc + 4);
+            machine->WriteRegister(NextPCReg, pc + 8);
+        } 
+    }   else
+    {
 	printf("Unexpected user mode exception %d %d\n", which, type);
 	ASSERT(FALSE);
     }
