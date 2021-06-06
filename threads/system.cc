@@ -10,6 +10,8 @@
 
 // This defines *all* of the global data structures used by Nachos.
 // These are all initialized and de-allocated by this file.
+Lock* JoinLock[10];
+int exitCode[10];
 
 Thread *currentThread;			// the thread we are running now
 Thread *threadToBeDestroyed;  		// the thread that just finished
@@ -159,6 +161,8 @@ Initialize(int argc, char **argv)
     interrupt->Enable();
     CallOnUserAbort(Cleanup);			// if user hits ctl-C
     
+
+
 #ifdef USER_PROGRAM
     machine = new Machine(debugUserProg);	// this must come first
 #endif

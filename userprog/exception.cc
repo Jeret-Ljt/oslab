@@ -21,7 +21,6 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
-#define USER_PROGRAM
 #include "copyright.h"
 #include "system.h"
 #include "syscall.h"
@@ -48,6 +47,7 @@
 //	"which" is the kind of exception.  The list of possible exceptions 
 //	are in machine.h.
 //----------------------------------------------------------------------
+extern void run_thread(int arg);
 
 void RunFork(int ptr){
     //printf("ok!");
@@ -107,8 +107,8 @@ ExceptionHandler(ExceptionType which)
    	            interrupt->Halt();
             }   else
             if (type == SC_Exit){
-                //printf("exit code: %d\n", machine->ReadRegister(4));
-                ASSERT(machine->ReadRegister(4) == 0);
+                printf("thread %s: exit code: %d\n", currentThread->getName(), machine->ReadRegister(4));
+                exitCode[currentThread->get_thread_id()] = machine->ReadRegister(4);
                 currentThread->Finish();
             }   else
             if (type == SC_Fork){
@@ -128,9 +128,49 @@ ExceptionHandler(ExceptionType which)
                 machine->WriteRegister(NextPCReg, next_pc + 4);
             }   else
             if (type == SC_Exec){
-                
-            }
+                int ptr = machine->ReadRegister(4);
+                char *name = new char[100];
+                for (int i = 0; i < 100; i++) name[i] = 0;
+                int len = 0;
+                do{
+                    int value;
+                    while (!machine->ReadMem(ptr, 1, &value));
+                    ptr++;
+                    name[len++] = (char)value;
+                }   while (name[len-1] != 0);
+
+                OpenFile *executable = fileSystem->Open(name);
+                AddrSpace *space;
+
+                if (executable == NULL) {
+                    printf("Unable to open file %s\n", name);
+                    ASSERT(0);
+                }
+                space = new AddrSpace(executable); 
+
+                Thread* p_thread = new Thread(name); 
+                p_thread->space = space;
+
+                delete executable;		// close file
+               // delete[] name;
+                p_thread->Fork(run_thread, 0);
+                machine->WriteRegister(2, p_thread->get_thread_id());
+
+                int next_pc = machine->ReadRegister(NextPCReg);
+                machine->WriteRegister(PCReg, next_pc);
+                machine->WriteRegister(NextPCReg, next_pc + 4);
+            }   else
+            if (type == SC_Join)
             {
+                int ptr = machine->ReadRegister(4);
+                JoinLock[ptr]->Acquire();
+                JoinLock[ptr]->Release();
+
+                machine->WriteRegister(2, exitCode[ptr]);
+                int next_pc = machine->ReadRegister(NextPCReg);
+                machine->WriteRegister(PCReg, next_pc);
+                machine->WriteRegister(NextPCReg, next_pc + 4);
+            }   else{
                 printf("Unexpected syscall type %d\n", type);
                 ASSERT(FALSE);
             }

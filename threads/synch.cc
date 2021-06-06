@@ -108,13 +108,17 @@ Lock::Lock(char* debugName) {
 Lock::~Lock() {
     delete queue;
 }
-void Lock::Acquire() {
+void Lock::Acquire(Thread* t) {
+    Thread* ct;
+    if (t == NULL) ct = currentThread;
+        else ct = t;
+
     IntStatus oldLevel = interrupt->SetLevel(IntOff);	// disable interrupts
     while (held_thread != NULL){  
-	    queue->Append((void *)currentThread);	// so go to sleep
-        currentThread->Sleep();
+	    queue->Append((void *)ct);	// so go to sleep
+        ct->Sleep();
     }
-    held_thread = currentThread;
+    held_thread = ct;
     (void) interrupt->SetLevel(oldLevel);	// re-enable interrupts
 }
 void Lock::Release() {

@@ -22,6 +22,7 @@
 //----------------------------------------------------------------------
 
 void run_thread(int arg){
+    
     currentThread->space->InitRegisters();		// set the initial register values
     currentThread->space->RestoreState();
     machine->Run();

@@ -40,6 +40,10 @@ Thread::Thread(char* threadName, int threadPriority, bool sub)
     stack = NULL;
     status = JUST_CREATED;
     thread_id = thread_num++;
+
+    JoinLock[thread_id] = new Lock(threadName);
+    JoinLock[thread_id]->Acquire(this); //lock at the begin, release at the end
+
     subThread = sub;
 #ifdef USER_PROGRAM
     space = NULL;
@@ -63,7 +67,6 @@ Thread::Thread(char* threadName, int threadPriority, bool sub)
 Thread::~Thread()
 {
     DEBUG('t', "Deleting thread \"%s\"\n", name);
-
     ASSERT(this != currentThread);
     if (stack != NULL)
 	DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
@@ -165,6 +168,7 @@ Thread::Finish ()
     DEBUG('t', "Finishing thread \"%s\"\n", getName());
     
     threadToBeDestroyed = currentThread;
+    JoinLock[thread_id]->Release();
     Sleep();					// invokes SWITCH
     // not reached
 }

@@ -13,10 +13,12 @@
 			 * physical memory 
 			 */
 
-int A[Dim][Dim];
-int B[Dim][Dim];
+int A[Dim][Dim] = {
+	{2, 0, 0},
+	{0, 2, 0},
+	{0, 0, 2},
+};
 int C[Dim][Dim];
-
 int
 main()
 {
@@ -24,15 +26,13 @@ main()
 
     for (i = 0; i < Dim; i++)		/* first initialize the matrices */
 	for (j = 0; j < Dim; j++) {
-	     A[i][j] = i;
-	     B[i][j] = j;
 	     C[i][j] = 0;
 	}
 
     for (i = 0; i < Dim; i++)		/* then multiply them together */
 	for (j = 0; j < Dim; j++)
             for (k = 0; k < Dim; k++)
-		 C[i][j] += A[i][k] * B[k][j];
+		 C[i][j] += A[i][k] * A[k][j];
 
-    Exit(C[0][0]);		/* and then we're done */
+    Exit(C[0][0] + C[1][1] + C[2][2]);		/* and then we're done, should be 12*/
 }

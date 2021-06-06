@@ -30,6 +30,10 @@ extern Interrupt *interrupt;			// interrupt status
 extern Statistics *stats;			// performance metrics
 extern Timer *timer;				// the hardware alarm clock
 
+extern Lock* JoinLock[10];
+extern int exitCode[10];
+
+
 extern int thread_num;
 #ifdef USER_PROGRAM
 #include "machine.h"
