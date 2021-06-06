@@ -29,13 +29,19 @@
 // Internal data structures kept public so that Directory operations can
 // access them directly.
 
+
+
 class DirectoryEntry {
   public:
     bool inUse;				// Is this directory entry in use?
     int sector;				// Location on disk to find the 
 					//   FileHeader for this file
-    char name[FileNameMaxLen + 1];	// Text name for file, with +1 for 
-					// the trailing '\0'
+    int fileTYpe; //0: simple file; 1:directory
+
+    int nameLen;
+    int namePtr;
+
+    void GetName(char *buf);
 };
 
 // The following class defines a UNIX-like "directory".  Each entry in
@@ -61,7 +67,7 @@ class Directory {
     int Find(char *name);		// Find the sector number of the 
 					// FileHeader for file: "name"
 
-    bool Add(char *name, int newSector);  // Add a file name into the directory
+    bool Add(char *name, int newSector, int fileType = 0);  // Add a file name into the directory
 
     bool Remove(char *name);		// Remove a file from the directory
 
@@ -71,13 +77,16 @@ class Directory {
 					//  of the directory -- all the file
 					//  names and their contents.
 
+    DirectoryEntry* GetEntry(int index);
+
+    int FindIndex(char *name);		// Find the index into the directory 
+			//  table corresponding to "name"
   private:
     int tableSize;			// Number of directory entries
     DirectoryEntry *table;		// Table of pairs: 
 					// <file name, file header location> 
 
-    int FindIndex(char *name);		// Find the index into the directory 
-					//  table corresponding to "name"
+ 
 };
 
 #endif // DIRECTORY_H

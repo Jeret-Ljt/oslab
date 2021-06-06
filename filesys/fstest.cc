@@ -108,7 +108,7 @@ Print(char *name)
 //	  PerformanceTest -- overall control, and print out performance #'s
 //----------------------------------------------------------------------
 
-#define FileName 	"TestFile"
+#define FileName 	"a/b/c"
 #define Contents 	"1234567890"
 #define ContentSize 	strlen(Contents)
 #define FileSize 	((int)(ContentSize * 300))
@@ -165,11 +165,10 @@ FileWrite()
       printf("Perf test: can't create %s\n", FileName);
       return;
     }
-
     for (int i = 0; i < 5; i++){
         char buf[30];
         sprintf(buf, "Writing Thread %d", i);
-        printf("%s", buf);
+        //printf("%s", buf);
         Thread* t = new Thread(buf, 0);
         t->Fork(ThreadWrite, i);
     }
@@ -203,7 +202,6 @@ PerformanceTest_bak()
     stats->Print();
 }
 
-
 void
 PerformanceTest()
 {
@@ -211,7 +209,7 @@ PerformanceTest()
     stats->Print();
 
     FileWrite();
-    
+    currentThread->Yield();
     FileRead();
 
     if (!fileSystem->Remove(FileName)) {

@@ -87,8 +87,7 @@ FileHeader::Allocate(BitMap *freeMap, int fileSize)
 
 
     int numIndirectSectors = divRoundUp(numTotalSectors - numDirectSectors, NumInIndirect);
-    printf("%d", numIndirectSectors);
-
+   
     if (freeMap->NumClear() < numDirectSectors + numIndirectSectors + numIndirectSectors * NumInIndirect)
 	    return FALSE;		// not enough space
     
@@ -265,8 +264,4 @@ FileHeader::Print()
         printf("\n"); 
     }
     delete [] data;
-}
-
-void FileHeader::SetType(int type){
-    fileType = type;
 }

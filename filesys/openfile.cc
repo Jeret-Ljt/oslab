@@ -258,3 +258,7 @@ bool OpenFile::AllocateMore(BitMap* bitMap, int size){
 }
 
 int OpenFile::GetHdrSector(){return hdrSector;}
+
+int OpenFile::GetPosition(){
+    return seekPosition;
+}

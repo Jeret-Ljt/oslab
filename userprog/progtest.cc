@@ -8,7 +8,6 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
-#define USER_PROGRAM
 #include "copyright.h"
 #include "system.h"
 #include "console.h"
@@ -65,8 +64,6 @@ StartProcess(char *filename)
 // I/O requests wait on a Semaphore to delay until the I/O completes.
 
 static SyncConsole *sync_console;
-static Semaphore *readAvail;
-static Semaphore *writeDone;
 
 //----------------------------------------------------------------------
 // ConsoleInterruptHandlers
@@ -80,18 +77,49 @@ static Semaphore *writeDone;
 //	the output.  Stop when the user types a 'q'.
 //----------------------------------------------------------------------
 
+
+Semaphore* empty = new Semaphore("CP", 0);
+Semaphore* full = new Semaphore("CP2", 1);
+
+
+void inputC(int arg){
+    FileDescribeTable* pipe = fileSystem->fdOpen("pipe");
+    for (;;) {
+	    char ch = sync_console->GetChar();
+        full->P();
+        pipe->Write(&ch, 1);
+        empty->V();
+        if (ch == 'q') 
+            interrupt->Halt();    
+    }
+}
+
+void outputC(int arg){
+    FileDescribeTable* pipe = fileSystem->fdOpen("pipe");
+    for (;;) {
+        char ch;
+        empty->P();
+        pipe->Read(&ch, 1);
+        full->V();
+        
+        sync_console->PutChar(ch);
+
+        if (ch == 'q') interrupt->Halt();
+    }
+}
+
 void 
 ConsoleTest (char *in, char *out)
 {
     char ch;
-
     sync_console = new SyncConsole(in, out);
-    readAvail = new Semaphore("read avail", 0);
-    writeDone = new Semaphore("write done", 0);
     
-    for (;;) {
-	    ch = sync_console->GetChar();
-        sync_console->PutChar(ch);
-	    if (ch == 'q') return;  // if q, quit
-    }
+    fileSystem->Create("pipe", 0, 0);
+    Thread* inputT = new Thread("intput", 0);
+    inputT->Fork(inputC, 1);
+    Thread* outputT = new Thread("output", 0);
+    outputT->Fork(outputC, 1);
+    currentThread->Sleep();
+    return;
 }
+

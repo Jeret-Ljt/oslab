@@ -24,7 +24,11 @@
 #include "utility.h"
 #include "filehdr.h"
 #include "directory.h"
+#include "system.h"
 
+void DirectoryEntry::GetName(char *buf){
+    fileSystem->GetFileName(buf, namePtr, nameLen);
+}
 //----------------------------------------------------------------------
 // Directory::Directory
 // 	Initialize a directory; initially, the directory is completely
@@ -87,12 +91,28 @@ Directory::WriteBack(OpenFile *file)
 //	"name" -- the file name to look up
 //----------------------------------------------------------------------
 
+
+DirectoryEntry* 
+Directory::GetEntry(int index)
+{
+    return table + index;
+}
+
 int
 Directory::FindIndex(char *name)
 {
-    for (int i = 0; i < tableSize; i++)
-        if (table[i].inUse && !strncmp(table[i].name, name, FileNameMaxLen))
-	    return i;
+    for (int i = 0; i < tableSize; i++){
+        if (table[i].inUse == false) continue;
+
+        char *tableName = new char[table[i].nameLen + 1];
+        table[i].GetName(tableName);
+
+        if (!strncmp(tableName, name, table[i].nameLen)){
+	        delete[] tableName;
+            return i;
+        }
+        delete[] tableName;
+    }
     return -1;		// name not in directory
 }
 
@@ -111,7 +131,7 @@ Directory::Find(char *name)
     int i = FindIndex(name);
 
     if (i != -1)
-	return table[i].sector;
+	    return table[i].sector;
     return -1;
 }
 
@@ -127,7 +147,7 @@ Directory::Find(char *name)
 //----------------------------------------------------------------------
 
 bool
-Directory::Add(char *name, int newSector)
+Directory::Add(char *name, int newSector, int fileType)
 { 
     if (FindIndex(name) != -1)
 	return FALSE;
@@ -135,8 +155,13 @@ Directory::Add(char *name, int newSector)
     for (int i = 0; i < tableSize; i++)
         if (!table[i].inUse) {
             table[i].inUse = TRUE;
-            strncpy(table[i].name, name, FileNameMaxLen); 
+            
+            int p = fileSystem->AddName(name);
+            table[i].namePtr = p;
+            table[i].nameLen = strlen(name);
+
             table[i].sector = newSector;
+            table[i].fileTYpe = fileType;
         return TRUE;
 	}
     return FALSE;	// no space.  Fix when we have extensible files.
@@ -170,8 +195,14 @@ void
 Directory::List()
 {
    for (int i = 0; i < tableSize; i++)
-	if (table[i].inUse)
-	    printf("%s\n", table[i].name);
+	if (table[i].inUse) {
+	    char* name = new char[table[i].nameLen + 1];
+        name[table[i].nameLen] = '\0';
+
+        table[i].GetName(name);
+        printf("%s\n", name);
+        delete[] name;
+    }
 }
 
 //----------------------------------------------------------------------
@@ -188,7 +219,12 @@ Directory::Print()
     printf("Directory contents:\n");
     for (int i = 0; i < tableSize; i++)
 	if (table[i].inUse) {
-	    printf("Name: %s, Sector: %d\n", table[i].name, table[i].sector);
+        char *name = new char[table[i].nameLen + 1];
+        name[table[i].nameLen] = '\0';
+
+        table[i].GetName(name);
+
+	    printf("Name: %s, Sector: %d\n", name, table[i].sector);
 	    hdr->FetchFrom(table[i].sector);
 	    hdr->Print();
 	}

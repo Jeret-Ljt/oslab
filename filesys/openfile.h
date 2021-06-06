@@ -93,6 +93,7 @@ class OpenFile {
 
 	int GetHdrSector();
 
+	int GetPosition();
 	int referenceCount; //easy for filesys to change
   private:
 	int hdrSector;

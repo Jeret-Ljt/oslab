@@ -17,7 +17,7 @@
 #include "disk.h"
 #include "bitmap.h"
 
-#define HdrOtherInfoSize (2 * sizeof(int))
+#define HdrOtherInfoSize (1 * sizeof(int))
 #define NumIndirect 8
 #define NumDirect ((SectorSize - NumIndirect * sizeof(int) - HdrOtherInfoSize) / sizeof(int))
 #define NumInIndirect (SectorSize / sizeof(int))
@@ -77,11 +77,8 @@ class FileHeader {
 
     void Print();			// Print the contents of the file.
     
-    void SetType(int type);
-
 
   private:
-    int fileType;    //1: file 0: diretory
     int numBytes;			// Number of bytes in the file
     int dataSectors[NumDirect];		// Disk sector numbers for each data , directly
     int indirectDataSectors[NumIndirect]; // indirect data sector
