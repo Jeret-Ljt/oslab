@@ -80,8 +80,9 @@ class Thread {
     int* stackTop;			 // the current stack pointer
     int machineState[MachineStateSize];  // all registers except for stackTop
     int priority;
+    bool subThread;
   public:
-    Thread(char* debugName, int priority = 0);		// initialize a Thread 
+    Thread(char* debugName, int priority = 0, bool sub = 0);		// initialize a Thread 
     ~Thread(); 				// deallocate a Thread
 					// NOTE -- thread being deleted
 					// must not be running when delete 

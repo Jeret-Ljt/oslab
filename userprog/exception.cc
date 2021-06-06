@@ -49,6 +49,12 @@
 //	are in machine.h.
 //----------------------------------------------------------------------
 
+void RunFork(int ptr){
+    //printf("ok!");
+    currentThread->space->ForkState(ptr);
+    machine->Run();
+    ASSERT(0);
+}
 void
 ExceptionHandler(ExceptionType which)
 {
@@ -56,7 +62,6 @@ ExceptionHandler(ExceptionType which)
     int p_page, v_page, d_page;
     switch (which){
         case PageFaultException:
-
             p_page = machine->MBitMap->Find();
             v_page = machine->registers[BadVAddrReg] / PageSize;
             d_page = machine->pageTable[v_page].tmp_disk_page;
@@ -102,10 +107,32 @@ ExceptionHandler(ExceptionType which)
    	            interrupt->Halt();
             }   else
             if (type == SC_Exit){
-
-                printf("exit code: %d\n", machine->ReadRegister(4));
+                //printf("exit code: %d\n", machine->ReadRegister(4));
                 ASSERT(machine->ReadRegister(4) == 0);
                 currentThread->Finish();
+            }   else
+            if (type == SC_Fork){
+                int funcPtr = machine->ReadRegister(4);
+                Thread* p_thread = new Thread("fork thread", 0, 1); 
+                p_thread->space = currentThread->space;
+                p_thread->Fork(RunFork, funcPtr);
+                int next_pc = machine->ReadRegister(NextPCReg);
+                machine->WriteRegister(PCReg, next_pc);
+                machine->WriteRegister(NextPCReg, next_pc + 4);
+            }   else
+            if (type == SC_Yield){
+                currentThread->Yield();
+
+                int next_pc = machine->ReadRegister(NextPCReg);
+                machine->WriteRegister(PCReg, next_pc);
+                machine->WriteRegister(NextPCReg, next_pc + 4);
+            }   else
+            if (type == SC_Exec){
+                
+            }
+            {
+                printf("Unexpected syscall type %d\n", type);
+                ASSERT(FALSE);
             }
         break;
         case TLBMissException:

@@ -74,11 +74,13 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
 // how big is address space?
     size = noffH.code.size + noffH.initData.size + noffH.uninitData.size 
-			+ UserStackSize;	// we need to increase the size
+			+ UserStackSize * 3;	// we need to increase the size
 						// to leave room for the stack
+                        // if we fork we need more stack sapce
     numPages = divRoundUp(size, PageSize);
     size = numPages * PageSize;
 
+    stackNum = 1; //if we fork we need more stack sapce
    // ASSERT(numPages <= NumPhysPages);		// check we're not trying
 						// to run anything too big --
 						// at least until we have
@@ -180,6 +182,21 @@ AddrSpace::InitRegisters()
 void AddrSpace::SaveState() 
 {
     
+}
+
+//----------------------------------------------------------------------
+// AddrSpace::ForState
+//----------------------------------------------------------------------
+void AddrSpace::ForkState(int ptr) 
+{
+    for (int i = 0; i < NumTotalRegs; i++)
+	    machine->WriteRegister(i, 0);
+    machine->WriteRegister(PCReg, ptr);
+
+    machine->WriteRegister(NextPCReg, ptr + 4);
+
+    machine->WriteRegister(StackReg, numPages * PageSize - 16 - stackNum * UserStackSize);
+    stackNum++;
 }
 
 //----------------------------------------------------------------------

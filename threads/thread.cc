@@ -32,7 +32,7 @@
 //	"threadName" is an arbitrary string, useful for debugging.
 //----------------------------------------------------------------------
 
-Thread::Thread(char* threadName, int threadPriority)
+Thread::Thread(char* threadName, int threadPriority, bool sub)
 {
     priority = threadPriority;
     name = threadName;
@@ -40,6 +40,7 @@ Thread::Thread(char* threadName, int threadPriority)
     stack = NULL;
     status = JUST_CREATED;
     thread_id = thread_num++;
+    subThread = sub;
 #ifdef USER_PROGRAM
     space = NULL;
     user_id = user_num++;
@@ -67,7 +68,7 @@ Thread::~Thread()
     if (stack != NULL)
 	DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
 #ifdef USER_PROGRAM
-    if (space != NULL) 
+    if (space != NULL && !subThread) 
         delete space;
 #endif
 }
